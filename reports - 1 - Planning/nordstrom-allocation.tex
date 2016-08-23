@@ -50,8 +50,80 @@ For the purpose of this paper, we assume that the retailer has already developed
 
 \section{Forecasting Online Sales}
 
-%\subsection{}
+When forecasting on-line sales, we start with a set of households, denoted $\mathcal{H}$.  When performing forecasting, we usually create forecasts not for individual households but for groups of households.  For example, we might create forecasts within political boundaries (\emph{e.g.,} county or state) or within designated marketing areas.  Define a partition $\mathcal{P}$ of $\mathcal{H}$, so $\mathcal{P} = \{P_1, P_2, ..., P_K \}$, where $P_k \cap P_{k'} = \emptyset$ for all $k$ and $k'$ and $\bigcup_k P_k = \mathcal{H}$.  The elements of this partition constitute the set of regions for which forecasts are created.
 
+For simplicity of modeling, we assume that forecasting for the SKU of interest has been performed taking a Bayesian approach, so the retailer has posterior distributions for each of the parameters in the forecasting model.  Denote the historical demand data from which the forecasting model was constructed $\mathbf{Y}$ and the historical independent variables used to predict demand $\mathbf{X}$.  Denote the set of parameters in the model $\boldsymbol{\theta}$.  Using a Bayesian approach, the forecasting model has a posterior distribution for $\boldsymbol{\theta}$,
 
+$$\pi (\boldsymbol{\theta} \mid \mathbf{Y}, \mathbf{X}) \propto \pi (\mathbf{Y} \mid \boldsymbol{\theta}, \mathbf{X}) \pi (\boldsymbol{\theta}).$$
+
+\noindent For the purpose of forecasting future sales, we assume that future values of the independent variables are known.  We denote those future values $\mathbf{X}^*$.  Similarly, we denote future values of demand $\mathbf{Y}^*$.  The predictive distribution of $\mathbf{Y}^*$ is
+
+$$\pi (\mathbf{Y}^* \mid \mathbf{X}^*, \mathbf{Y}, \mathbf{X}) = \int_{\boldsymbol{\Theta}} \pi (\mathbf{Y}^* \mid \boldsymbol{\theta}, \mathbf{X}^*) \pi (\boldsymbol{\theta} \mid \mathbf{Y}, \mathbf{X}) d \boldsymbol{\theta}$$.
+
+\noindent We assume that forecasting is performed over a finite set of time points, $1, \ldots, T$ within each region.  The forecast in region $k$ at time $t$ is denoted $Y_{kt}^*$.  The total demand across all time points and regions is denoted $D^*$, and
+
+$$D^* = \sum_{t = 1}^T \sum_{k = 1}^K Y_{kt}^*$$
+
+\section{Determining the Buy}
+
+For our determination of optimal allocation, we assume that the number of units purchased has already been determined.  Denote the total number of units purchased $B$.  Typically, the actual buy is selected to ensure a low probability that demand exceeds supply.  For example, we might select the $95^{th}$ percentile of the predictive distribution of $D^*$, giving a $5\%$ probability that demand will exceed supply.
+
+\section{Fulfillment Centers}
+
+Denote the set of fulfillment centers for e-commerce orders $\mathcal{F}$.  We also define a function $l \colon \mathcal{F} \mapsto \mathbb{R}^2$ giving the location of any fulfillment center in $\mathcal{F}$ in the two-dimensional plane.  We use $J$ to denote the total number of fulfillment centers in $\mathcal{F}$.
+
+\section{Cost functions}
+
+There are two primary factors associated with optimal allocation
+
+\begin{itemize}
+\item Cost of delivering units from fulfillment centers to delivery addresses, denoted
+\item Cost of transferring units between fulfillment centers to respond to shifts in demand
+\end{itemize}
+
+Each of these is a function.  The first is a function of household location and fulfillment center location, with distances between the two generally being associated with greater cost for delivery.  Denote this cost function $c_1 \colon \mathcal{F} \times \mathcal{H} \mapsto \mathbb{R}^+$.  The second is a function of the two fulfillment center locations.  As with $c_1$ the cost typically increases with distance, but in this case it may also increase with the number of units shipped between the two locations.  Denote this cost function $c_2 \colon \mathcal{F}^2 \times \mathbb{I}^+ \mapsto \mathbb{R}^+$.
+
+These functions may be complicated, but they are typically straightforward linear equations with fixed and variable cost components.  Denote the distance (in miles, time, or other unit convenient for describing shipping cost) between two points $d(\cdot, \cdot)$.  Then, a typical function for delivery would be
+
+$$c_1 (f, h) = \gamma_{11} + \gamma_{12} d(f, h),$$
+
+\noindent where $\gamma_{11}$ and $\gamma_{12}$ are positive values representing fixed cost and variable cost associated with distance travelled, respectively.  A typical function for transfer would be
+
+$$c_2 (f_1, f_2, u) = \gamma_{21} + \gamma_{22} u + \gamma_{23} d(f_1, f_2),$$
+
+\noindent where $u$ is the number of units shipped, and $\gamma_{21}$, $\gamma_{22}$, and $\gamma_{23}$ are positive values representing fixed cost and variable cost associated with number of units shipped and distance travelled, respectively.
+
+\section{Fulfillment and Transfer Rules}
+
+Each business is unique in determining the rules it follows for fulfillment and transfer.  Fulfillment rules specify how each household placing an order will be assigned to the fulfillment center that will fulfill the order.  Transfer rules specify when transfers of units will be made between fulfillment centers.  We assume that these rules have been specified by the business and are not being optimized as part of the allocation optimization problem.
+
+\section{Markdowns}
+
+Retailers use markdowns to dispose of inventory that remains after the total demand for the full-price product has been exhausted.  When $D < B$, there are $B - D$ excess units to be marked down by the business.  These units are typically sold a price resulting in a lower AUR than for the full-price product.  We assume that the AUR for excess units can be expressed using a function $m \colon \mathbb{I}^2 \mapsto \mathbb{R}^+$.  A typical function for markdown would be
+
+$$m (B, D) = r \exp \{- \delta (B - D) \},$$
+
+\noindent where $r$ is the AUR for full-price units before demand is exhausted and $\delta$ is a parameter controlling how much markdown is required to dispose of excess inventory.
+
+\section{Initial Allocation and Value}
+
+For each of the $J$ fulfillment centers, our goal is to specify the number of units to be initially placed in each fulfillment center.  Let $\alpha_{jt}$ denote the inventory in fulfillment center $j$ at time $t$.  The initial allocation to fulfillment center $j$ is denoted $\alpha_{j0}$.
+
+Given an initial allocation, a set of fulfillment and transfer rules, a set of cost functions, an AUR value, a formula for markdown AUR, and a set of known demand values, it is possible to calculate a total value for an allocation rule as
+
+\begin{align*}
+\nu(\alpha_{10}, \alpha_{20}, \ldots, \alpha_{J0}, \mathbf{y}^*) = &Br \mathrm{I}_{\{B \leq D\}} \\
+&+ \left( Dr + (B - D) r \exp \{ - \delta (B - D) \} \right) \mathrm{I}_{ \{ B > D \} } \\
+&+ \sum_{t = 1}^T \sum_{k = 1}^K \sum_{i = 1}^{n_{kt}} c_1 (f_{tki}, h_{tki}) \\
+&+ \sum_{a = 1}^A c_2 (f_{a1}, f_{a2}, u_a),
+\end{align*}
+
+\noindent where $\mathrm{I}_{\{ \cdot \}}$ is the indicator function taking a value of $1$ if its subscript is true and $0$ otherwise, $n_{kt}$ is the number of households in region $k$ placing orders at time $t$, $h_{tki}$ is the $i^{th}$ household placing an order in region $k$ at time $t$, $f_{tki}$ is the fulfillment center delivering to household $h_{tki}$, and $A$ is the total number of transfers made between fulfillment centers.  The first line of the equation is the total sales value (number of units bought time AUR) when fewer units are purchased than the amount of demand at full price.  The second line is the total sales value when more units are purchased than the number for which there is demand at full price.  The third line is the cost of delivery.  The fourth line is the cost of transfers.
+
+While it is possible to calculate the value if future purchases are known, the future purchases are a random variable.  Consequently, instead of optimizing value, we optimize expected value, $\mathbb{E}(\nu)$.
+
+$$\mathbb{E}(\nu) = \int_{\mathbf{Y}^*} \nu(\alpha_{10}, \alpha_{20}, \ldots, \alpha_{J0}, \mathbf{Y}^*) \pi (\mathbf{Y}^* \mid \mathbf{X}^*, \mathbf{Y}, \mathbf{X}) d \mathbf{Y}^*$$
 
 \end{document}  
+
+
