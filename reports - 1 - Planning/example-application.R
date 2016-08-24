@@ -42,7 +42,12 @@ ggplot(household_locations) +
   geom_point() +
   geom_text(data = fulfill_centers_locations,
             aes(x = x, y = y, label = fc),
-            color = "#000000", size = 4)
+            color = "#000000", size = 4) +
+  scale_x_continuous("") +
+  scale_y_continuous("") +
+  scale_color_discrete("Region")
+ggsave("reports - 1 - Planning/white-paper-figures/hh-fc-locations.eps",
+       height = 4, width = 6)
 
 
 #Define the posterior distribution of actual orders in different regions.
@@ -84,6 +89,40 @@ ggplot(curve_frame) +
   aes(x = x, y = y) +
   geom_line() +
   facet_wrap(~ region)
+
+# #Get 95% intervals for the posterior on the curves
+# curve_frame <- NULL
+# x <- 1:n_time_periods
+# for (i in 1:100) {
+#   for (j in 1:n_regions) {
+#     alpha <- theta_1_means[j]^2 / theta_1_variances[j]
+#     beta <- theta_1_means[j] / theta_1_variances[j]
+#     theta_1 <- rgamma(1, alpha, beta)
+#     alpha <- theta_2_means[j]^2 / theta_2_variances[j]
+#     beta <- theta_2_means[j] / theta_2_variances[j]
+#     theta_2 <- rgamma(1, alpha, beta)
+#     y <- theta_1 * exp(-x / theta_2)
+#     curve_frame <- rbind(curve_frame,
+#                          data.frame(region = rep(j, length(x)),
+#                                     x = x,
+#                                     y = cumsum(y)))
+#   }
+# }
+# curve_frame <- ddply(curve_frame, .(region, x),
+#                      .fun = function(mdf) {
+#                        data.frame(l95 = quantile(mdf$y, .025),
+#                                   u95 = quantile(mdf$y, .975))
+#                      })
+# ggplot(curve_frame) +
+#   aes(x = x, y = l95) +
+#   geom_line(color = "#FF0000") +
+#   geom_line(aes(y = u95), color = "#FF0000") +
+#   facet_wrap(~ region) +
+#   scale_x_continuous("Time") +
+#   scale_y_continuous("Cumulative Demand (units)")
+# ggsave("reports - 1 - Planning/white-paper-figures/demand-curve-95pct.eps",
+#        height = 4, width = 6)
+
 
 #Generate a large number of samples from the posterior distributions
 n_samples <- 10000
@@ -670,4 +709,25 @@ p <- ggplot(avgs[avgs$Var1 != 343,]) +
   geom_point(size = 10) +
   facet_wrap(~ Var3) +
   ggtitle("X")
-aap_format(p, color_scheme = "blue", display_metadata = FALSE)
+
+#Create images of the fitted model along with observed values.
+avgs125 <- avgs[avgs$Var1 != 343,]
+avgs125$loss <- avgs125$ev - max(avgs125$ev)
+fit <- lm(loss ~ Var1 + Var2 + Var3
+          + Var1 * Var2 + Var1 * Var3 + Var2 * Var3
+          + I(Var1^2) + I(Var2^2) + I(Var3^2),
+          data = avgs125)
+pred_frame$predicted <- predict(fit, newdata = pred_frame)
+
+pred_frame125 <- pred_frame[pred_frame$Var1 != 343,]
+ggplot(pred_frame125[pred_frame125$Var1 %in% seq(100, 500, by = 100) &
+                    pred_frame125$Var2 %in% seq(300, 700, by = 100),]) +
+  aes(x = Var3, y = predicted) +
+  geom_line() +
+  geom_point(data = avgs125, aes(x = Var3,  y = loss)) +
+  scale_x_continuous("Initial Allocation to Fulfillment Center 3") +
+  scale_y_continuous(label = dollars) +
+  facet_grid(Var1 ~ Var2)
+ggsave("reports - 1 - Planning/white-paper-figures/model-fit-broad.eps",
+       height = 4, width = 6)
+
