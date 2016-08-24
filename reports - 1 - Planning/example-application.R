@@ -726,8 +726,19 @@ ggplot(pred_frame125[pred_frame125$Var1 %in% seq(100, 500, by = 100) &
   geom_line() +
   geom_point(data = avgs125, aes(x = Var3,  y = loss)) +
   scale_x_continuous("Initial Allocation to Fulfillment Center 3") +
-  scale_y_continuous(label = dollars) +
-  facet_grid(Var1 ~ Var2)
+  scale_y_continuous(label = dollar) +
+  facet_grid(Var1 ~ Var2) +
+  theme(axis.text.x = element_text(size = 5))
 ggsave("reports - 1 - Planning/white-paper-figures/model-fit-broad.eps",
        height = 4, width = 6)
+
+max_panel <- pred_frame125[pred_frame125$Var1 == 400 &
+                             pred_frame125$Var2 == 600,]
+max_panel[which.max(max_panel$predicted),]
+
+final_optimum <- expand.grid(Var1 = 410:430,
+                             Var2 = 560:580,
+                             Var3 = 670:690)
+final_optimum$predicted <- predict(fit, final_optimum)
+final_optimum[which.max(final_optimum$predicted),]
 
