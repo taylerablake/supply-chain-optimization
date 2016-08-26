@@ -90,38 +90,38 @@ ggplot(curve_frame) +
   geom_line() +
   facet_wrap(~ region)
 
-# #Get 95% intervals for the posterior on the curves
-# curve_frame <- NULL
-# x <- 1:n_time_periods
-# for (i in 1:100) {
-#   for (j in 1:n_regions) {
-#     alpha <- theta_1_means[j]^2 / theta_1_variances[j]
-#     beta <- theta_1_means[j] / theta_1_variances[j]
-#     theta_1 <- rgamma(1, alpha, beta)
-#     alpha <- theta_2_means[j]^2 / theta_2_variances[j]
-#     beta <- theta_2_means[j] / theta_2_variances[j]
-#     theta_2 <- rgamma(1, alpha, beta)
-#     y <- theta_1 * exp(-x / theta_2)
-#     curve_frame <- rbind(curve_frame,
-#                          data.frame(region = rep(j, length(x)),
-#                                     x = x,
-#                                     y = cumsum(y)))
-#   }
-# }
-# curve_frame <- ddply(curve_frame, .(region, x),
-#                      .fun = function(mdf) {
-#                        data.frame(l95 = quantile(mdf$y, .025),
-#                                   u95 = quantile(mdf$y, .975))
-#                      })
-# ggplot(curve_frame) +
-#   aes(x = x, y = l95) +
-#   geom_line(color = "#FF0000") +
-#   geom_line(aes(y = u95), color = "#FF0000") +
-#   facet_wrap(~ region) +
-#   scale_x_continuous("Time") +
-#   scale_y_continuous("Cumulative Demand (units)")
-# ggsave("reports - 1 - Planning/white-paper-figures/demand-curve-95pct.eps",
-#        height = 4, width = 6)
+#Get 95% intervals for the posterior on the curves
+curve_frame <- NULL
+x <- 1:n_time_periods
+for (i in 1:100) {
+  for (j in 1:n_regions) {
+    alpha <- theta_1_means[j]^2 / theta_1_variances[j]
+    beta <- theta_1_means[j] / theta_1_variances[j]
+    theta_1 <- rgamma(1, alpha, beta)
+    alpha <- theta_2_means[j]^2 / theta_2_variances[j]
+    beta <- theta_2_means[j] / theta_2_variances[j]
+    theta_2 <- rgamma(1, alpha, beta)
+    y <- theta_1 * exp(-x / theta_2)
+    curve_frame <- rbind(curve_frame,
+                         data.frame(region = rep(j, length(x)),
+                                    x = x,
+                                    y = cumsum(y)))
+  }
+}
+curve_frame <- ddply(curve_frame, .(region, x),
+                     .fun = function(mdf) {
+                       data.frame(l95 = quantile(mdf$y, .025),
+                                  u95 = quantile(mdf$y, .975))
+                     })
+ggplot(curve_frame) +
+  aes(x = x, y = l95) +
+  geom_line(color = "#FF0000") +
+  geom_line(aes(y = u95), color = "#FF0000") +
+  facet_wrap(~ region) +
+  scale_x_continuous("Time") +
+  scale_y_continuous("Cumulative Demand (units)")
+ggsave("reports - 1 - Planning/white-paper-figures/demand-curve-95pct.eps",
+       height = 4, width = 6)
 
 
 #Generate a large number of samples from the posterior distributions
@@ -201,15 +201,10 @@ fc_expected_fulfillment <- ddply(data.frame(fc = fc_region_assignments,
 initial_allocation <- round(total_buy * fc_expected_fulfillment$expected_sales /
                               sum(fc_expected_fulfillment$expected_sales))
 
-initial_allocation <- total_buy * rep(.25, 4)
-
 #Set up cost parameters
-alpha_21 <- 5 #fixed cost of delivering a unit
-alpha_22 <- 5 #variable cost of delivering a unit 1 distance unit
-min_transfer <- 25 #Minimum number of units you can ship between FCs
-alpha_11 <- 4 #fixed cost of doing a transfer
-alpha_12 <- 1 #per unit cost of doing a transfer
-alpha_13 <- 5 #variable cost of doing a transfer 1 distance unit
+alpha_1 <- 5 #fixed cost of delivering a unit
+alpha_2 <- 5 #variable cost of delivering a unit 1 distance unit
+alpha_3 <- 2 #variable cost of delivering a unit 1 time unit
 AUR <- 29.99 #Item sale price
 delta <- 0.00069 #Discount factor per additional unit over demand (markdown rate)
                 #0.00069 implies that AUR is cut in half for an over-order of 1000 units
@@ -334,54 +329,16 @@ for (this_generation in 1:n_generations) {
     }
     
     #Calculate the cost of fulfilling under this strategy
-    delivery_cost <- sum(alpha_21 + alpha_22 * 
-      as.numeric(deliver_distances)[as.numeric(current_delivery_strategy) == 1])
+    delivery_cost <- sum(alpha_1 + alpha_2 * 
+      as.numeric(deliver_distances)[as.numeric(current_delivery_strategy) == 1] +
+        alpha_3 *
+        floor(10 * as.numeric(deliver_distances)[as.numeric(current_delivery_strategy) == 1]))
     
     #Update inventory
     fulfill_total <- apply(current_delivery_strategy, 1, sum)
     current_inventory <- current_inventory - fulfill_total
     
-    #Determine whether we're going to do any transfers among FCs
-    if (sum(current_inventory) > 0 & time_point < n_time_periods) {
-      
-      #Calculate expected buys remaining in each FC
-      buys_remaining <- apply(matrix(expected_buys[, (time_point + 1):n_time_periods],
-                                     nrow = n_regions), 1, sum)
-      fc_expected_fulfillment <- ddply(data.frame(fc = fc_region_assignments,
-                                                  buys_remaining = buys_remaining),
-                                       .(fc), summarize,
-                                       buys_remaining = sum(buys_remaining))
-      
-      #Only do something if we have a differential of at least min_transfer in each
-      #direction
-      gap <- current_inventory - fc_expected_fulfillment$buys_remaining
-      
-      transfer_cost <- 0
-      while (max(gap) > min_transfer & -min(gap) > min_transfer) {
-        
-        #Identify which ones you can transfer from and to
-        from_fcs <- which(gap > min_transfer)
-        to_fcs <- which(gap < -min_transfer)
-        
-        #Which one has the most to give?
-        giver <- from_fcs[which.max(gap[from_fcs])]
-        
-        #Which one needs the most?
-        receiver <- to_fcs[which.min(gap[to_fcs])]
-        
-        #Transfer the minimum of the amount needed or the amount available to give
-        to_transfer <- round(min(-gap[receiver], gap[giver]))
-        current_inventory[giver] <- current_inventory[giver] - to_transfer
-        current_inventory[receiver] <- current_inventory[receiver] + to_transfer
-        
-        transfer_cost <- transfer_cost + alpha_11 + alpha_12 * to_transfer +
-          alpha_13 * transfer_distances[giver, receiver]
-        
-        gap <- current_inventory - fc_expected_fulfillment$buys_remaining
-        
-      }
-
-    }
+    #Transfer component was removed 2016-08-25
     
     total_fulfilled <- total_fulfilled + fulfill_total
     total_delivery_cost <- total_delivery_cost + delivery_cost
@@ -412,20 +369,12 @@ for (this_generation in 1:n_generations) {
 expected_value <- mean(value_storage$total_value)
 value_storage
 
-opt_result <- value_storage
-
-plot(sort(opt_result$total_value),
-     sort(value_storage$total_value))
-
 #Implement an optimization on this.
 set.seed(1978)
 #Set up cost parameters
-alpha_21 <- 5 #fixed cost of delivering a unit
-alpha_22 <- 5 #variable cost of delivering a unit 1 distance unit
-min_transfer <- 25 #Minimum number of units you can ship between FCs
-alpha_11 <- 4 #fixed cost of doing a transfer
-alpha_12 <- 1 #per unit cost of doing a transfer
-alpha_13 <- 5 #variable cost of doing a transfer 1 distance unit
+alpha_1 <- 5 #fixed cost of delivering a unit
+alpha_2 <- 5 #variable cost of delivering a unit 1 distance unit
+alpha_3 <- 2 #variable cost of delivering a unit 1 time unit
 AUR <- 29.99 #Item sale price
 delta <- 0.00069 #Discount factor per additional unit over demand (markdown rate)
 #0.00069 implies that AUR is cut in half for an over-order of 1000 units
@@ -447,6 +396,10 @@ for (j in 1:(n_fulfill_centers - 1)) {
                               min(allocation_list[[j]] + 200, 100 * floor(total_buy / 100)),
                               by = 100)
 }
+#Override manually since this didn't find the max
+allocation_list[[1]] <- seq(300, 700, by = 100)
+allocation_list[[2]] <- seq(500, 900, by = 100)
+allocation_list[[3]] <- seq(400, 800, by = 100)
 other_allocations <- as.matrix(expand.grid(allocation_list))
 other_allocations <- cbind(other_allocations,
                            total_buy - apply(other_allocations, 1, sum))
@@ -578,54 +531,16 @@ for (this_allocation in 1:nrow(allocations)) {
       }
       
       #Calculate the cost of fulfilling under this strategy
-      delivery_cost <- sum(alpha_21 + alpha_22 * 
-                             as.numeric(deliver_distances)[as.numeric(current_delivery_strategy) == 1])
+      delivery_cost <- sum(alpha_1 + alpha_2 * 
+                             as.numeric(deliver_distances)[as.numeric(current_delivery_strategy) == 1] +
+                             alpha_3 *
+                             floor(10 * as.numeric(deliver_distances)[as.numeric(current_delivery_strategy) == 1]))
       
       #Update inventory
       fulfill_total <- apply(current_delivery_strategy, 1, sum)
       current_inventory <- current_inventory - fulfill_total
       
-      #Determine whether we're going to do any transfers among FCs
-      if (sum(current_inventory) > 0 & time_point < n_time_periods) {
-        
-        #Calculate expected buys remaining in each FC
-        buys_remaining <- apply(matrix(expected_buys[, (time_point + 1):n_time_periods],
-                                       nrow = n_regions), 1, sum)
-        fc_expected_fulfillment <- ddply(data.frame(fc = fc_region_assignments,
-                                                    buys_remaining = buys_remaining),
-                                         .(fc), summarize,
-                                         buys_remaining = sum(buys_remaining))
-        
-        #Only do something if we have a differential of at least min_transfer in each
-        #direction
-        gap <- current_inventory - fc_expected_fulfillment$buys_remaining
-        
-        transfer_cost <- 0
-        while (max(gap) > min_transfer & -min(gap) > min_transfer) {
-          
-          #Identify which ones you can transfer from and to
-          from_fcs <- which(gap > min_transfer)
-          to_fcs <- which(gap < -min_transfer)
-          
-          #Which one has the most to give?
-          giver <- from_fcs[which.max(gap[from_fcs])]
-          
-          #Which one needs the most?
-          receiver <- to_fcs[which.min(gap[to_fcs])]
-          
-          #Transfer the minimum of the amount needed or the amount available to give
-          to_transfer <- round(min(-gap[receiver], gap[giver]))
-          current_inventory[giver] <- current_inventory[giver] - to_transfer
-          current_inventory[receiver] <- current_inventory[receiver] + to_transfer
-          
-          transfer_cost <- transfer_cost + alpha_11 + alpha_12 * to_transfer +
-            alpha_13 * transfer_distances[giver, receiver]
-          
-          gap <- current_inventory - fc_expected_fulfillment$buys_remaining
-          
-        }
-        
-      }
+      #Transfer component was removed 2016-08-25
       
       total_fulfilled <- total_fulfilled + fulfill_total
       total_delivery_cost <- total_delivery_cost + delivery_cost
@@ -659,7 +574,7 @@ for (this_allocation in 1:nrow(allocations)) {
   print(t2 - t1)
 }
 
-save.image("data/example-application-run-20160822.RData")
+save.image("data/example-application-run-20160825.RData")
 
 allocation_frame <- as.data.frame(allocations)
 allocation_frame$allocation_number <- 1:nrow(allocation_frame)
@@ -675,9 +590,9 @@ pred_frame$predicted <- predict(fit)
 pred_frame <- unique(pred_frame[, c("Var1", "Var2", "Var3", "V4", "predicted")])
 pred_frame[which.max(pred_frame$predicted),]
 
-pred_frame <- expand.grid(Var1 = seq(100, 500, by = 10),
-                          Var2 = seq(300, 700, by = 10),
-                          Var3 = seq(500, 900, by = 10))
+pred_frame <- expand.grid(Var1 = seq(300, 700, by = 10),
+                          Var2 = seq(500, 900, by = 10),
+                          Var3 = seq(400, 800, by = 10))
 pred_frame$predicted <- predict(fit, newdata = pred_frame)
 p <- ggplot(pred_frame[pred_frame$Var3 == 700,]) +
   aes(x = Var1, y = Var2, color = predicted) +
@@ -720,8 +635,8 @@ fit <- lm(loss ~ Var1 + Var2 + Var3
 pred_frame$predicted <- predict(fit, newdata = pred_frame)
 
 pred_frame125 <- pred_frame[pred_frame$Var1 != 343,]
-ggplot(pred_frame125[pred_frame125$Var1 %in% seq(100, 500, by = 100) &
-                    pred_frame125$Var2 %in% seq(300, 700, by = 100),]) +
+ggplot(pred_frame125[pred_frame125$Var1 %in% seq(300, 700, by = 100) &
+                    pred_frame125$Var2 %in% seq(500, 900, by = 100),]) +
   aes(x = Var3, y = predicted) +
   geom_line() +
   geom_point(data = avgs125, aes(x = Var3,  y = loss)) +
@@ -732,13 +647,13 @@ ggplot(pred_frame125[pred_frame125$Var1 %in% seq(100, 500, by = 100) &
 ggsave("reports - 1 - Planning/white-paper-figures/model-fit-broad.eps",
        height = 4, width = 6)
 
-max_panel <- pred_frame125[pred_frame125$Var1 == 400 &
-                             pred_frame125$Var2 == 600,]
+max_panel <- pred_frame125[pred_frame125$Var1 == 500 &
+                             pred_frame125$Var2 == 800,]
 max_panel[which.max(max_panel$predicted),]
 
-final_optimum <- expand.grid(Var1 = 410:430,
-                             Var2 = 560:580,
-                             Var3 = 670:690)
+final_optimum <- expand.grid(Var1 = 490:510,
+                             Var2 = 790:810,
+                             Var3 = 530:550)
 final_optimum$predicted <- predict(fit, final_optimum)
 final_optimum[which.max(final_optimum$predicted),]
 
