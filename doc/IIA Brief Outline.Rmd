@@ -1,0 +1,55 @@
+---
+title: "IIA Supply Chain Optimization Brief"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+
+\section{Problem}
+
+\subsection{ROI}
+
+In 2016, e-commerce sales totaled an estimated $394.9 billion, accounting for 8.1 percent of total annual sales. This total was a 15 percent increase from 2015. Advances in technology and adoption of the internet has forced the retail industry to make dramatic shifts toward e-commerce. While this presents a tremendous opportunity for business growth, the cost associated with inefficiencies in supply chains makes optimally allocating inventory to fulfillment centers integral to retailers' success. Customer retention and loyalty requires the business to deliver products quickly and efficiently, so inventory allocation to fulfillment centers must account for two primary factors:
+
++ item cost of delivering units from fulfillment centers to delivery addresses
++ length of time required to fulfill orders to delivery addresses from fulfillment centers
+
+While the first of these costs can be associated with a particular dollar value, the cost related to the second consideration is driven by customer disatisfaction with delayed product arrivals and is more difficult to quantify. Additionally, there are a host of other factors to be considered when optimizing inventory allocation. These include the cost of transferring units between fulfillment centers to respond to shifts in demand, as well as decisions about whether to fulfill online orders from stores instead of dedicated fulfillment centers. In the following sections, we propose a method to determine the proper allocation of inventory to fulfillment centers. Our method assumes that no transfers are
+made between fulfillment centers and that e-commerce orders are fulfilled only from dedicated fulfillment centers and no orders will be fulfilled by stores, however, potential future work could be explored by relaxing these assumptions.
+
+\subsection{Technical Complexity}
+
+
+
+\subsubsection{[Typical Solution] How they work:}
+
+There are several products on the market for supply chain optimization, and many of those products are outfitted with the functionality for determining efficient allocation of inventory to distribution centers. The classic approach to optimizing supply chain relies on predicting future inventory demand by fitting statistical models which use past demand as well as predicted future events to forecast future demand. Often, these forecasts are done using data that has been aggregated to a fairly high level, such as by week, subpopulation of customers, category of merchandise, etc, though new technical ability to store and access large amounts of data quickly allows demand forecasting to be done at a far more granular level, such as at the daily level, per item per customer. 
+
+Safety stock is the extra stock kept on hand to mitigate rish of inventory depletion due to unpredictability in demand. A distributor will set safety stock levels at a particular distribution center so that the service level - the probability of demand quantity exceeding the inventory quantity on hand is low so as to minimize the loss in sales due to the inability to fulfill orders and in turn, increase customer retention. However, too much safety stock leads to unnecessary costs, which makes finding the appropriate balance between too much and too little essential for efficient distribution.          
+
+
+\subsection{[Typical Solution] Why they suck:}   
+
+Despite the numerous existing applications offering solutions to the allocation problem, distribution inefficiencies are still quite prevelant. This, in part, is due to poor performance of these applications, some of which suffer from the following shortcomings:
+
+      
+
+      - They make rigid assumptions about the demand distribution. For example, many software packages assume that the demand is normally distributed and base the amount of product buy on a percentile of this Normal distribution.
+
+          + Common methods for calculating safety stock 
+
+      - Some packages offer more sophisticated methods of forecasting demand than others. However, there is uncertainty associated with any prediction irrespective of the quality of the model that provides it. Many existing software options calculate the optimal initial allocation, $\alpha_0$, under the assumption that they can predict demand perfectly - that is, $Y^*$ is known and that the prediction error accompanying the forecast is zero.
+    
+Not accounting for the uncertainty in demand forecasts results in sub-optimal inventory allocation and, consequently, excess costs for inefficient product distribution.
+  
+\section{Solution}
+
+\subsection{Optimize over everything to account for uncertainty in demand predictions}
+  
+\subsection{But how? Math!}
+  
+\section{After} 
+
+* Output -> Outcome -> minimize loss -> increase ROI 
