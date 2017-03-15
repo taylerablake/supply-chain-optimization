@@ -135,32 +135,35 @@ $(document).ready(function () {
 <h2>Technical Complexity</h2>
 <div id="typical-solution-how-they-work" class="section level3">
 <h3>[Typical Solution] How they work:</h3>
-<p>There are several products on the market for supply chain optimization, and many of those products are outfitted with the functionality for determining efficient allocation of inventory to distribution centers. The classic approach to optimizing supply chain relies on predicting future inventory demand by fitting statistical models which use past demand as well as predicted future events to forecast future demand. Often, these forecasts are done using data that has been aggregated to a fairly high level, such as by week, subpopulation of customers, category of merchandise, etc, though new technical ability to store and access large amounts of data quickly allows demand forecasting to be done at a far more granular level, such as at the daily level, per item per customer. A distributor then manages the unpredictability in demand by setting safety stock levels at a particular center so that the probability of demand quantity exceeding the inventory quantity on hand is low.</p>
+<p>There are several products on the market for supply chain optimization. Many of those products are outfitted with the functionality for determining efficient allocation of inventory to distribution centers. The common approach to optimizing inventory allocation decomposes into two primary tasks: predicting future inventory demand and then given this forecast, develop a plan to purchase and distribute products so as to meet the demands at each fulfillment center in the most cost efficient way possible.</p>
+<p>Demand predictions are made by fitting statistical models using past demand as well as predicted future events to forecast future demand. Often, these forecasts are done using data that has been aggregated to a fairly high level, such as by week, subpopulation of customers, category of merchandise, etc, though new technical ability to store and access large amounts of data quickly allows demand forecasting to be done at a far more granular level, such as at the daily level, per item per customer. Safety stock is the extra stock kept on hand to mitigate rish of inventory depletion due to unpredictability in demand.</p>
+<p>The <em>service level</em> refers to the probability of the period-specific demand quantity exceeding the inventory quantity on hand:</p>
+<p><span class="math inline">\(\alpha = Prob\left(\mbox{period demand} \le \mbox{available inventory stock}\right)\)</span></p>
+<p>A distributor sets safety stock levels at any given fulfillment center so that the center’s service level low with the intent to minimize the loss in sales due to the inability to fulfill orders, increasing customer retention. However, too much safety stock leads to unnecessary costs, which makes finding the appropriate balance between too much and too little essential for efficient distribution. Once an adequate demand prediction is and the uncertainty with this forecast is quantified, retailers determine the product buy - the amount of product to purchase for order fulfillment, and which e-commerce fulfillment center fulfills each online order using a set of rules which specify the logic necessary for minimizing the cost of shipping orders from fulfillment centers to delivery locations and the amount of time required for products to be delivered to the customer.</p>
 </div>
-<div id="typical-solution-why-they-suck" class="section level3">
-<h3>[Typical Solution] Why they suck:</h3>
-<p>Despite the numerous existing applications offering solutions to the allocation problem, distribution inefficiencies are still quite prevelant. This, in part, is due to poor performance of these applications, some of which suffer from the following shortcomings:</p>
-<pre><code>  - They make rigid assumptions about the demand distribution. For example, many software packages assume that the demand is normally distributed and base the amount of product buy on a percentile of this Normal distribution.
-
-  - Some packages offer more sophisticated methods of forecasting demand than others. However, there is uncertainty associated with any prediction irrespective of the quality of the model that provides it. Many existing software options calculate the optimal initial allocation, $\alpha_0$, under the assumption that they can predict demand perfectly - that is, $Y^*$ is known and that the prediction error accompanying the forecast is zero.</code></pre>
+</div>
+<div id="typical-solution-why-they-suck" class="section level2">
+<h2>[Typical Solution] Why they suck:]</h2>
+<p>Despite the numerous existing applications offering solutions to the allocation problem, distribution inefficiencies are still quite prevelant. The underperformance of many tools can be attributed to one of more key shortcomings, the first of which is that they rely on rigid assumptions about the distribution of future product demand for a given fulfillment center. For example, many universally accepted methods assume that safety stock is proportional to the standard deviation of the demand, which is assumed to be normally distributed.</p>
+<p>Additionally, it is common in the existing market for software solutions to assume that the demand at a given fulfillment center is independent from week to week, i.e. that the demand in the current week contains useful information for predicting demand for the week to follow. In most practical situations, this assumption is invalid due to the innate dependency between time and demand. For instance, promotional campaigns</p>
+<p>Some packages offer more sophisticated methods of forecasting demand than others. However, there is uncertainty associated with any prediction irrespective of the quality of the model that provides it. Many existing software options calculate the optimal initial allocation, <span class="math inline">\(\alpha_0\)</span>, under the assumption that they can predict demand perfectly - that is, <span class="math inline">\(Y^*\)</span> is known and that the prediction error accompanying the forecast is zero.</p>
 <p>Not accounting for the uncertainty in demand forecasts results in sub-optimal inventory allocation and, consequently, excess costs for inefficient product distribution.</p>
 </div>
 </div>
-</div>
 <div id="solution" class="section level1">
-<h1>Solution</h1>
+<h1>[Solution]</h1>
 <div id="optimize-over-everything-to-account-for-uncertainty-in-demand-predictions" class="section level2">
-<h2>Optimize over everything to account for uncertainty in demand predictions</h2>
+<h2>[Optimize over everything to account for uncertainty in demand predictions]</h2>
 </div>
 <div id="but-how-math" class="section level2">
-<h2>But how? Math!</h2>
+<h2>[But how? Math!]</h2>
 </div>
-</div>
-<div id="after" class="section level1">
-<h1>After</h1>
+<div id="after" class="section level2">
+<h2>[After]</h2>
 <ul>
 <li>Output -&gt; Outcome -&gt; minimize loss -&gt; increase ROI</li>
 </ul>
+</div>
 </div>
 
 
