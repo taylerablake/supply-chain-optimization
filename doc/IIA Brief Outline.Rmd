@@ -1,9 +1,10 @@
 ---
 title: "IIA Supply Chain Optimization Brief"
 output:
-  pdf_document: default
-  header-includes:
-  - \usepackage{color}
+    pdf_document:
+        includes:
+            in_header: mystyles.sty
+
 ---
 
 
