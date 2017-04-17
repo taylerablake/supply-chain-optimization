@@ -16,7 +16,6 @@ n_time_periods <- 100
 
 #Create all the households
 n_households <- 10000
-
 household_locations <- data.frame(x = runif(n_households),
                                   y = runif(n_households))
 
@@ -24,7 +23,6 @@ household_locations <- data.frame(x = runif(n_households),
 n_regions <- 8
 
 clusters <- kmeans(household_locations, n_regions)
-
 household_locations$region <- clusters$cluster
 
 #Create the fulfillment centers
@@ -39,13 +37,16 @@ transfer_distances <- as.matrix(dist(fulfill_centers_locations[, c("x", "y")]))
 
 ggplot(household_locations) +
   aes(x = x, y = y, color = as.factor(region)) +
-  geom_point() +
+  geom_point(alpha=0.5) +
   geom_text(data = fulfill_centers_locations,
-            aes(x = x, y = y, label = fc),
-            color = "#000000", size = 4) +
+            aes(x = x, y = y,label = fc),
+            color = "#000000", size = 5) +
   scale_x_continuous("") +
   scale_y_continuous("") +
-  scale_color_discrete("Region")
+  scale_color_discrete("Region") +
+  theme_minimal() +
+  xlab("") +
+  ylab("")
 ggsave("reports - 1 - Planning/white-paper-figures/hh-fc-locations.eps",
        height = 4, width = 6)
 
@@ -54,11 +55,22 @@ ggsave("reports - 1 - Planning/white-paper-figures/hh-fc-locations.eps",
 #Data distribution
 #Y_{kt} ~ Poi(\mu_{kt})
 #\mu_{kt} = \theta_{k1} * exp(-t / \theta_{k2})
+
 #Posterior distribution of \theta
 theta_1_means <- rnorm(n_regions, 10, 2)
 theta_1_variances <- rgamma(n_regions, 1, 1)
 theta_2_means <- rgamma(n_regions, 3 * n_time_periods / 3, 3)
 theta_2_variances <- rgamma(n_regions, 5 * n_time_periods / 6, 5)
+
+
+data.frame( expand.grid(t=1:n_time_periods,region=factor(1:8)),
+           demand_mean=sapply(1:n_regions,
+                  function(i){theta_1_means[i]*exp(-(seq(1:n_time_periods)/n_time_periods)*theta_2_means[i])}) %>% as.vector()) %>%
+  ggplot(.,aes(x=t,y=demand_mean)) +
+  geom_line(aes(colour=region)) +
+  theme_minimal() +
+  xlab("t") +
+  ylab(expression(mu[kt]))
 
 #For a gamma distribution
 #mu = alpha / beta
@@ -88,7 +100,7 @@ for (i in 1:10) {
 ggplot(curve_frame) +
   aes(x = x, y = y) +
   geom_line() +
-  facet_wrap(~ region)
+  facet_wrap(~ region) + theme_minimal()
 
 #Get 95% intervals for the posterior on the curves
 curve_frame <- NULL
