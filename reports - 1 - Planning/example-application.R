@@ -87,6 +87,7 @@ for (i in 1:10) {
     alpha <- theta_1_means[j]^2 / theta_1_variances[j]
     beta <- theta_1_means[j] / theta_1_variances[j]
     theta_1 <- rgamma(1, alpha, beta)
+    
     alpha <- theta_2_means[j]^2 / theta_2_variances[j]
     beta <- theta_2_means[j] / theta_2_variances[j]
     theta_2 <- rgamma(1, alpha, beta)
@@ -125,16 +126,31 @@ curve_frame <- ddply(curve_frame, .(region, x),
                        data.frame(l95 = quantile(mdf$y, .025),
                                   u95 = quantile(mdf$y, .975))
                      })
+
+curve_frame <- ddply(curve_frame,
+                     .(region, x),
+                     transform,
+                     l95 = quantile(y, .025),
+                     u95 = quantile(y, .975))
+
 ggplot(curve_frame) +
-  aes(x = x, y = l95) +
-  geom_line(color = "#FF0000") +
-  geom_line(aes(y = u95), color = "#FF0000") +
+  geom_point(aes(x=x,y=y),
+             alpha=0.12,
+             size=1.2) +
+  geom_line(data=curve_frame[!duplicated(curve_frame[,c("x","region")]),],
+            aes(x=x,y=l95),
+            color = "#FF0000") +
+  geom_line(data=curve_frame[!duplicated(curve_frame[,c("x","region")]),],
+            aes(x=x,y=u95),
+            color = "#FF0000") +
   facet_wrap(~ region) +
+  theme_minimal() +
   scale_x_continuous("Time") +
   scale_y_continuous("Cumulative Demand (units)")
-ggsave("reports - 1 - Planning/white-paper-figures/demand-curve-95pct.eps",
+ggsave(file.path(getwd(),"reports - 1 - Planning","white-paper-figures","demand-curve-95pct.eps"),
        height = 4, width = 6)
-
+ggsave(file.path(getwd(),"reports - 1 - Planning","white-paper-figures","demand-curve-95pct.png"),
+       height = 4, width = 6)
 
 #Generate a large number of samples from the posterior distributions
 n_samples <- 10000
@@ -354,7 +370,7 @@ for (this_generation in 1:n_generations) {
     
     total_fulfilled <- total_fulfilled + fulfill_total
     total_delivery_cost <- total_delivery_cost + delivery_cost
-    total_transfer_cost <- total_transfer_cost + transfer_cost
+#    total_transfer_cost <- total_transfer_cost + transfer_cost
     
     
   }
@@ -365,14 +381,14 @@ for (this_generation in 1:n_generations) {
   total_value <- amt_sold * AUR * (total_buy < total_demand) +
     ((amt_sold * AUR + (total_buy - amt_sold) * AUR * exp(-delta * (total_buy - amt_sold))) * 
        (total_buy >= total_demand)) -
-    total_delivery_cost -
-    total_transfer_cost
+    total_delivery_cost #-
+#    total_transfer_cost
   value_storage$total_value[this_generation] <- total_value
   value_storage$amt_sold[this_generation] <- amt_sold
   value_storage$total_buy[this_generation] <- total_buy
   value_storage$total_demand[this_generation] <- total_demand
   value_storage$total_delivery_cost[this_generation] <- total_delivery_cost
-  value_storage$total_transfer_cost[this_generation] <- total_transfer_cost
+#  value_storage$total_transfer_cost[this_generation] <- total_transfer_cost
   value_storage$full_price[this_generation] <- amt_sold * AUR
   value_storage$marked_down[this_generation] <- (total_buy - amt_sold) * AUR * exp(-delta * (total_buy - amt_sold)) * (total_buy >= total_demand)
 
@@ -452,7 +468,7 @@ for (this_allocation in 1:nrow(allocations)) {
     current_inventory <- initial_allocation
     total_fulfilled <- 0
     total_delivery_cost <- 0
-    total_transfer_cost <- 0
+    #total_transfer_cost <- 0
     for (time_point in 1:n_time_periods) {
       
       #If we're all out of inventory, we're done
@@ -556,7 +572,7 @@ for (this_allocation in 1:nrow(allocations)) {
       
       total_fulfilled <- total_fulfilled + fulfill_total
       total_delivery_cost <- total_delivery_cost + delivery_cost
-      total_transfer_cost <- total_transfer_cost + transfer_cost
+      #total_transfer_cost <- total_transfer_cost + transfer_cost
       
       
     }
@@ -567,8 +583,8 @@ for (this_allocation in 1:nrow(allocations)) {
     total_value <- amt_sold * AUR * (total_buy < total_demand) +
       ((amt_sold * AUR + (total_buy - amt_sold) * AUR * exp(-delta * (total_buy - amt_sold))) * 
          (total_buy >= total_demand)) -
-      total_delivery_cost -
-      total_transfer_cost
+      total_delivery_cost #-
+  #    total_transfer_cost
     value_storage$total_value[this_generation] <- total_value
     value_storage$amt_sold[this_generation] <- amt_sold
     value_storage$total_buy[this_generation] <- total_buy
@@ -586,7 +602,11 @@ for (this_allocation in 1:nrow(allocations)) {
   print(t2 - t1)
 }
 
-save.image("data/example-application-run-20160825.RData")
+
+save.image(file.path(getwd(),
+                     "data",
+                     paste0("example-application-run-",
+                     gsub(" ","_",gsub(":","-",Sys.time())),".RData")))
 
 allocation_frame <- as.data.frame(allocations)
 allocation_frame$allocation_number <- 1:nrow(allocation_frame)
@@ -608,9 +628,10 @@ pred_frame <- expand.grid(Var1 = seq(300, 700, by = 10),
 pred_frame$predicted <- predict(fit, newdata = pred_frame)
 p <- ggplot(pred_frame[pred_frame$Var3 == 700,]) +
   aes(x = Var1, y = Var2, color = predicted) +
-  geom_point(size = 5) +
+  geom_point(size = 6) +
   facet_wrap(~ Var3) +
   ggtitle("X") +
+  theme_minimal() +
   scale_color_gradientn(colors = terrain.colors(10))
 p <- ggplot(pred_frame) +
   aes(x = Var1, y = Var2, z = predicted) +
@@ -624,6 +645,7 @@ p <- ggplot(pred_frame) +
                          high = "#FF0000") +
   geom_contour(color = "#000000") +
   facet_wrap(~ Var3) +
+  theme_minimal() +
   ggtitle("X")
 p
 
@@ -631,14 +653,18 @@ avgs <- ddply(output_storage, .(Var1, Var2, Var3, V4),
               summarize, ev = mean(total_value))
 avgs[which.max(avgs$ev),]
 
-p <- ggplot(avgs[avgs$Var1 != 343,]) +
+p <- ggplot(avgs[avgs$Var3 != 1003,]) +
   aes(x = Var1, y = Var2, color = ev) +
   geom_point(size = 10) +
   facet_wrap(~ Var3) +
+  ylim(200,900) +
+  xlim(290,750) +
+  theme_minimal() +
   ggtitle("X")
+p
 
 #Create images of the fitted model along with observed values.
-avgs125 <- avgs[avgs$Var1 != 343,]
+avgs125 <- avgs[avgs$Var3 != 1003,]
 avgs125$loss <- avgs125$ev - max(avgs125$ev)
 fit <- lm(loss ~ Var1 + Var2 + Var3
           + Var1 * Var2 + Var1 * Var3 + Var2 * Var3
@@ -646,17 +672,17 @@ fit <- lm(loss ~ Var1 + Var2 + Var3
           data = avgs125)
 pred_frame$predicted <- predict(fit, newdata = pred_frame)
 
-pred_frame125 <- pred_frame[pred_frame$Var1 != 343,]
+pred_frame125 <- pred_frame[pred_frame$Var1 != 1003,]
 ggplot(pred_frame125[pred_frame125$Var1 %in% seq(300, 700, by = 100) &
                     pred_frame125$Var2 %in% seq(500, 900, by = 100),]) +
   aes(x = Var3, y = predicted) +
   geom_line() +
   geom_point(data = avgs125, aes(x = Var3,  y = loss)) +
   scale_x_continuous("Initial Allocation to Fulfillment Center 3") +
-  scale_y_continuous(label = dollar) +
+#  scale_y_continuous(label = dollar) +
   facet_grid(Var1 ~ Var2) +
   theme(axis.text.x = element_text(size = 5))
-ggsave("reports - 1 - Planning/white-paper-figures/model-fit-broad.eps",
+ggsave(file.path(getwd(),"reports - 1 - Planning","white-paper-figures","model-fit-broad.png"),
        height = 4, width = 6)
 
 max_panel <- pred_frame125[pred_frame125$Var1 == 500 &
