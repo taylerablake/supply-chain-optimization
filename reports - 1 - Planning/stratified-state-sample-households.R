@@ -1,16 +1,11 @@
+library(maps)
+library(maptools)
+library(sp)
+library(rgdal)
+library(ggmap)
+
 source(file.path(getwd(),"lib","latlon2state.R"))
-
 myYear <- 2016
-
-if (!( dir.exists(file.path(getwd(),
-                           "data",
-                           "census",
-                           myYear)) )){
-  dir.create(file.path(getwd(),
-                       "data",
-                       "census",
-                       myYear))  
-}
 
 
 
@@ -21,7 +16,6 @@ nation_geo <- readOGR(dsn=file.path(getwd(),
                       "cb_2015_us_nation_5m",
                       "cb_2015_us_nation_5m.shp"))
 
-coordinatesattributes(nation_geo)$polygons[[1]]
 state_geo <- readOGR(dsn=file.path(getwd(),
                                     "data",
                                     "census",
@@ -42,25 +36,106 @@ pop_by_state <- merge(attributes(state_geo)$data,pop_by_state[,c("GEO.display.la
       by.y="GEO.display.label")
 
 names(pop_by_state)[names(pop_by_state)=="respop72016"] <- "total_pop_2016" 
+names(pop_by_state)[names(pop_by_state)=="GEO.display.label"] <- "STATE"
+pop_by_state <- subset(pop_by_state,!(STATE%in%c("American Samoa",
+                                                "Guam",
+                                                "Commonwealth of the Northern Mariana Islands",
+                                                "Puerto Rico")))
+
+## calculate the proportion of the total national population living in each state
 pop_by_state <- transform(pop_by_state,
                           prop_national_pop=total_pop_2016/sum(pop_by_state$total_pop_2016))
-names(pop_by_state)[names(pop_by_state)=="GEO.display.label"] <- "NAME"
 
 
-pop_by_state <- subset(pop_by_state,!(NAME%in%c("American Samoa",
-  "Guam",
-  "Commonwealth of the Northern Mariana Islands",
-  "Puerto Rico")))
 
 
-## create a uniform grid over the rectangle bounding the lower 48
+
+## create a uniform grid over the rectangle bounding the lower 48 and label
+## each point with the corresponding state
+
 top <- 48.945
-bottom <- 30
-left <- -120
-right <- -76.8
+bottom <- 26
+left <- -124
+right <- -68
 
 grid_points <- expand.grid(x=seq(left,right,length.out=2000),
-                           y=seq(bottom,top,length.out=1000))
+                           y=seq(bottom,top,length.out=2000))
 STATE <- latlon2state(grid_points)
 grid_points <- grid_points[!is.na(STATE),]
-#%>% is.na %>% sum
+grid_points <- transform(grid_points,
+                         STATE=str_to_upper(as.character(STATE[!is.na(STATE)])))
+rm(STATE)
+
+
+
+
+
+
+
+
+## sample locations from the uniform grid for each state proportionally to 
+## its population share
+
+n_households <- 10000
+sample_size_by_state <- ceiling(pop_by_state$prop_national_pop*n_households)
+
+HH_samples <- NULL
+for (state.i in 1:length(pop_by_state$STATE)) {
+  if (str_to_upper(pop_by_state$STATE[state.i]) %in% unique(grid_points$STATE)) {
+    HH_samples <- rbind(HH_samples,
+                        grid_points[sample(which(grid_points$STATE==str_to_upper(as.character(pop_by_state$STATE[state.i]))),
+                                           sample_size_by_state[state.i],
+                                           replace = FALSE),])
+  }
+}
+
+rm(state_geo)
+rm(nation_geo)
+
+
+#Break the households into regions
+n_regions <- 8
+clusters <- kmeans(HH_samples[,c("x","y")],
+                   n_regions)
+HH_samples$region <- clusters$cluster
+names(HH_samples)[match(c("x","y"),
+                        names(HH_samples))] <- c("lon","lat")
+
+#Create the fulfillment centers
+n_fulfill_centers <- 5
+
+fulfill_centers_locations <- data.frame(grid_points[sample(which(!(grid_points$STATE %in%
+                                                                     c("MONTANA",
+                                                                       "WYOMING",
+                                                                       "NORTH DAKOTA",
+                                                                       "SOUTH DAKOTA"))),
+                                                           size=n_fulfill_centers),c("x","y")],
+                                        fc = 1:n_fulfill_centers)
+names(fulfill_centers_locations)[match(c("x","y"),
+                        names(fulfill_centers_locations))] <- c("lon","lat")
+
+
+map <- get_googlemap('United States',
+                     scale = 2,
+                     zoom=4,
+                     color="bw")
+ggmap(map, extent = 'device') +
+  geom_point(data=HH_samples,
+             aes(x=lon,
+                 y=lat,
+                 colour=factor(region)),
+             alpha=0.5,
+             size=0.75) +
+  geom_text(data=fulfill_centers_locations,
+            aes(x=lon,y=lat,label = fc),
+            color = "#000000", size = 5) +
+  guides(colour=guide_legend("Region")) +
+  scale_colour_tableau()
+rm(grid_points)
+
+
+
+
+
+
+
