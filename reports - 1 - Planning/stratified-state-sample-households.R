@@ -1,11 +1,11 @@
-
+source(file.path(getwd(),"lib","latlon2state.R"))
 
 myYear <- 2016
 
-if !( dir.exists(file.path(getwd(),
+if (!( dir.exists(file.path(getwd(),
                            "data",
                            "census",
-                           myYear)) ){
+                           myYear)) )){
   dir.create(file.path(getwd(),
                        "data",
                        "census",
@@ -61,7 +61,6 @@ right <- -76.8
 
 grid_points <- expand.grid(x=seq(left,right,length.out=2000),
                            y=seq(bottom,top,length.out=1000))
-# Test the function using points in Wisconsin and Oregon.
-testPoints <- data.frame(x = c(-90,-100,-120,-76.8), y = c(44, 44 ,48, 35))
-latlon2state(testPoints)
-latlon2state(grid_points) %>% table
+STATE <- latlon2state(grid_points)
+grid_points <- grid_points[!is.na(STATE),]
+#%>% is.na %>% sum
