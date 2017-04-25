@@ -54,7 +54,7 @@ pop_by_state <- transform(pop_by_state,
 ## each point with the corresponding state
 
 top <- 48.945
-bottom <- 26
+bottom <- 25
 left <- -124
 right <- -68
 
@@ -103,7 +103,6 @@ names(HH_samples)[match(c("x","y"),
 
 #Create the fulfillment centers
 n_fulfill_centers <- 5
-
 fulfill_centers_locations <- data.frame(grid_points[sample(which(!(grid_points$STATE %in%
                                                                      c("MONTANA",
                                                                        "WYOMING",
@@ -115,25 +114,28 @@ names(fulfill_centers_locations)[match(c("x","y"),
                         names(fulfill_centers_locations))] <- c("lon","lat")
 
 
-map <- get_googlemap('United States',
-                     scale = 2,
+map <- get_map('United States',
                      zoom=4,
-                     color="bw")
-ggmap(map, extent = 'device') +
+               color="bw",
+               maptype='hybrid')
+ggmap(map, extent = 'device',
+      darken=0.2) +
   geom_point(data=HH_samples,
              aes(x=lon,
                  y=lat,
                  colour=factor(region)),
-             alpha=0.5,
-             size=0.75) +
+             alpha=0.7,
+             size=0.6) +
   geom_text(data=fulfill_centers_locations,
             aes(x=lon,y=lat,label = fc),
-            color = "#000000", size = 5) +
+            color = "white", size = 6) +
   guides(colour=guide_legend("Region")) +
-  scale_colour_tableau()
+  scale_colour_tableau('tableau10')
 rm(grid_points)
 
 
+cache("HH_samples")
+cache("fulfill_centers_locations")
 
 
 
