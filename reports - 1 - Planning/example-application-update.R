@@ -46,7 +46,7 @@ ggmap(map, extent = 'device',
             fontface="bold") +
   guides(colour=guide_legend("Region")) +
   scale_colour_tableau('tableau10')
-ggsave("reports - 1 - Planning/white-paper-figures/ggmpa-hh-fc-locations.png",
+ggsave("reports - 1 - Planning/white-paper-figures/ggmap-hh-fc-locations.png",
        height = 4, width = 6)
 
 
@@ -97,18 +97,20 @@ for (i in 1:10) {
                                     y = cumsum(y)))
   }
 }
+
+region_nm <- paste0("Region ",curve_frame$region)
+curve_frame$region <- NULL
+curve_frame <- transform(curve_frame,
+                         region=region_nm)
+rm(region_nm)
 ggplot(curve_frame) +
   aes(x = x, y = y) +
-  geom_line() +
-  facet_wrap(~ region) + theme_minimal()
-
-
-
-
-
-
-
-
+  geom_line(alpha=0.6) +
+  facet_wrap(~ region,
+             nrow=2) +
+  theme_minimal() +
+  ylab("cumulative sales") +
+  xlab("day")
 
 
 
@@ -133,6 +135,11 @@ for (i in 1:100) {
   }
 }
 
+region_nm <- paste0("Region ",curve_frame$region)
+curve_frame$region <- NULL
+curve_frame <- transform(curve_frame,
+                         region=region_nm)
+rm(region_nm)
 curve_pci_frame <- ddply(curve_frame, .(region, x),
                      .fun = function(mdf) {
                        data.frame(l95 = quantile(mdf$y, .025),
@@ -142,11 +149,14 @@ ggplot(curve_frame) +
   geom_point(aes(x=x,y=y),alpha=0.05) +
   geom_line(data=curve_pci_frame,
             aes(x = x, y = l95),
-            color = "#FF0000") +
+            color = "#FF0000",
+            size=1.1) +
   geom_line(data=curve_pci_frame,
             aes(x = x, y = u95),
-            color = "#FF0000") +
-  facet_wrap(~ region) +
+            color = "#FF0000",
+            size=1.1) +
+  facet_wrap(~ region,
+             nrow=2) +
   scale_x_continuous("Time") +
   scale_y_continuous("Cumulative Demand (units)") +
   theme_minimal()
@@ -168,6 +178,28 @@ for (j in 1:n_regions) {
                                         theta_2 = rgamma(n_samples, alpha_2, beta_2)))
 }
 
+
+
+ggplot(data.frame(sales=rpois(100,sum(posterior_samples$theta_1[1] * 
+                                        exp(-seq(1) / posterior_samples$theta_2[1])))),
+       aes(x=sales)) +
+  geom_histogram(bins=12,fill="white",color="black") +
+  theme_minimal() +
+  xlab("items sold") +
+  ylab("") +
+  theme_wsj()
+ggsave(file=file.path(getwd(),"doc","img","sample-100-from-likelihood.png"))
+
+ggplot(data.frame(sales=rpois(100,sum(posterior_samples$theta_1[1] * 
+                            exp(-seq(1,365) / posterior_samples$theta_2[1])))),
+       aes(x=sales)) +
+  geom_histogram(bins=20,fill="white",color="black") +
+  theme_minimal() +
+  xlab("items sold") +
+  ylab("") +
+  theme_wsj()
+ggsave(file=file.path(getwd(),"doc","img","sample-100-365-days-from-likelihood.png"))
+  
 #Determine the buy. Set it at 90% of the predicted sales
 #For each of the sampled theta values, we need to generate the distribution of
 #actual sales by Monte Carlo.
@@ -231,10 +263,10 @@ fc_to_region_distances <- matrix(0, n_fulfill_centers, n_regions)
 for (i in 1:n_fulfill_centers) {
   for (j in 1:n_regions) {
     fc_to_region_distances[i, j] <- dist(matrix(
-      c(fulfill_centers_locations$x[i],
-        fulfill_centers_locations$y[i],
-        mean(household_locations$x[household_locations$region == j]),
-        mean(household_locations$y[household_locations$region == j])),
+      c(fulfill_centers_locations$lon[i],
+        fulfill_centers_locations$lat[i],
+        mean(HH_samples$lon[HH_samples$region == j]),
+        mean(HH_samples$lat[HH_samples$region == j])),
       ncol = 2, byrow = TRUE))
   }
 }
@@ -299,13 +331,13 @@ for (this_generation in 1:n_generations) {
     true_total_buy <- sum(true_buys[, time_point])
     order_hhs <- NULL
     for (j in 1:n_regions) {
-      order_hhs <- c(order_hhs, sample(which(household_locations$region == j),
+      order_hhs <- c(order_hhs, sample(which(HH_samples$region == j),
                                        true_buys[j, time_point], replace = FALSE))
     }
     
     #Calculate distances from each ordering HH to each FC
-    deliver_distances <- as.matrix(dist(rbind(fulfill_centers_locations[, c("x", "y")],
-                               household_locations[order_hhs, c("x", "y")])))
+    deliver_distances <- as.matrix(dist(rbind(fulfill_centers_locations[, c("lon", "lat")],
+                               HH_samples[order_hhs, c("lon", "lat")])))
     deliver_distances <- deliver_distances[1:n_fulfill_centers, 
                                            -(1:n_fulfill_centers)]
     deliver_distances <- matrix(as.numeric(deliver_distances), nrow = n_fulfill_centers)
@@ -419,6 +451,13 @@ for (this_generation in 1:n_generations) {
 expected_value <- mean(value_storage$total_value)
 value_storage
 
+
+
+
+
+
+
+
 #Implement an optimization on this.
 set.seed(1978)
 #Set up cost parameters
@@ -501,13 +540,13 @@ for (this_allocation in 1:nrow(allocations)) {
       true_total_buy <- sum(true_buys[, time_point])
       order_hhs <- NULL
       for (j in 1:n_regions) {
-        order_hhs <- c(order_hhs, sample(which(household_locations$region == j),
+        order_hhs <- c(order_hhs, sample(which(HH_samples$region == j),
                                          true_buys[j, time_point], replace = FALSE))
       }
       
       #Calculate distances from each ordering HH to each FC
-      deliver_distances <- as.matrix(dist(rbind(fulfill_centers_locations[, c("x", "y")],
-                                                household_locations[order_hhs, c("x", "y")])))
+      deliver_distances <- as.matrix(dist(rbind(fulfill_centers_locations[, c("lon", "lat")],
+                                                HH_samples[order_hhs, c("lon", "lat")])))
       deliver_distances <- deliver_distances[1:n_fulfill_centers, 
                                              -(1:n_fulfill_centers)]
       deliver_distances <- matrix(as.numeric(deliver_distances), nrow = n_fulfill_centers)
