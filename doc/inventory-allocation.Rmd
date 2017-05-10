@@ -1,9 +1,10 @@
 ---
 title: "Optimization of Inventory Allocation"
 output:
-    pdf_document:
-        includes:
-            in_header: mystyles.sty
+  pdf_document:
+    fig_caption: TRUE
+    includes:
+      in_header: mystyles.sty
 
 ---
 
@@ -28,7 +29,9 @@ Demand predictions are made by fitting statistical models using past demand as w
 
 The \textit{service level} refers to the probability of the period-specific demand quantity exceeding the inventory quantity on hand:
 
-$\alpha = Prob\left(\mbox{period demand} \le \mbox{available inventory stock}\right)$.
+\[
+\alpha = Prob\left(\mbox{period demand} \le \mbox{available inventory stock}\right).
+\]
 
 Setting safety stock levels appropriately is critical to minimizing costs. Typically, the amount of safety stock is chosen so that the probability of not meeting customer demand is low, based on the predicted sales. Loss is incurred due to incorrect forecasts by when
 
@@ -72,51 +75,70 @@ Let's shift our focus back to the problem of inventory allocation. To forecast o
 \item the allocation of the buy.
 \end{itemize}
 
-Retailers mark down prices to accelerate the rate of sales of inventory that hasn't been sold after a prespecified amount of time has passed. Denote the true demand during the pre-specified time period $d^*$.  When the demand does not meet the buy $d^* < b$, there are $b - d^*$ excess units to be sold, which are done so at a price resulting in a lower AUR than during the planned sales period. 
+Denote the _true demand_ during the pre-specified time period $d^*$. Retailers mark down prices to accelerate the rate of sales of inventory that hasn't been sold after a prespecified amount of time has passed. When the demand does not meet the buy, i.e. $d^* < b$, there are $b - d^*$ excess units to be sold. These units are sold at a price resulting in a lower AUR than during the planned sales period. 
 
-```{r,echo=FALSE, fig.align="center",out.width = "190px",out.height="190px"}
+```{r, ref.label="discountAUR", echo=FALSE, fig.cap="A typical curve for describing the relationship between the price of excess units and the overstock quantity - the amount by which the buy exceeds demand.",fig.align="center",out.width = "190px",out.height="190px"}
 library(ggplot2)
 library(magrittr)
-buy_seq <- seq(0,1000)
-d_star <- 500
-AUR <- 1
-revenue <- ifelse(buy_seq < d_star, AUR*buy_seq,
-                  d_star*AUR + ( AUR*exp(-0.69*(buy_seq-d_star)) ))
 
-
-data.frame(buy=buy_seq, revenue=revenue) %>%
-  subset(.,buy_seq >= d_star) %>% 
-  ggplot(.,aes(x=buy_seq,y=revenue-(d_star*AUR))) +
-  geom_line() +
-  geom_vline(xintercept=d_star,
-             linetype=4,
-             colour="red") +
-  ylab("revenue") +
-  xlab("buy") +
-  theme_minimal() +
-  geom_text() +
-  theme(axis.text = element_blank())
-
-data.frame(buy=buy_seq, revenue=revenue) %>%
-  ggplot(.,aes(x=buy_seq,y=revenue)) +
-  geom_line() +
-  geom_vline(xintercept=d_star,
-             linetype=4,
-             colour="red") +
-  ylab("revenue") +
-  xlab("buy") +
-  theme_minimal() +
-  geom_text() +
-  theme(axis.text = element_blank())
-
-
+data.frame(overstock=seq(0,100),
+            sale_AUR=20*exp(-0.08*seq(0,100))) %>%
+     ggplot(., aes(x=overstock,y=sale_AUR)) +
+     geom_line() +
+     theme_minimal() +
+     xlab("excess quantity") +
+     ylab("AUR") +
+     ggtitle("Discount amount per unit retail") +
+     theme(axis.text=element_blank())
 ```
 
-A typical function describing this relationship would be
+We assume that the AUR for excess units can be expressed using some function $m$. A typical choice for a function describing the relationship between how much overstock was purchased and the AUR specified for excess units is 
 
 $$m (b, d^*) = r \exp \{- \delta (b - d^*) \},$$
+\noindent which is displayed in Figure~\ref{fig:discountAUR}. $r$ is the AUR during the planned sales period, $\delta$ is a parameter controlling how much discounting is required to sell excess inventory. 
 
-\noindent where $r$ is the AUR during the planned sales period and $\delta$ is a parameter controlling how much markdown is required to sell excess inventory.
+```{r, ref.label="AURcurve", echo=FALSE, fig.cap="The maximum AUR is achieved when the demand exceeds the buy. As overstock increases, the revenue per unit sold decreases.",fig.align="center",out.width = "190px",out.height="190px"}
+library(ggplot2)
+library(magrittr)
+
+b <- seq(0,200)
+AUR <- ifelse(b<125,
+              20,
+              20*exp(-0.08*(b-125)))
+
+data.frame(buy=b,AUR=AUR) %>%
+     ggplot(., aes(x=buy,y=AUR)) +
+     geom_line() +
+     theme_minimal() +
+  geom_vline(xintercept=125,
+             linetype=4,
+             colour="red") +
+  geom_text(aes(label="b=d",
+                x=132, y=20),
+            inherit.aes = FALSE) +
+  geom_text(aes(label="b < d",
+                x=62.5, y=24),
+            inherit.aes = FALSE) +
+  geom_text(aes(label="b > d",
+                x=125+0.5*(200-125),
+                y=16),
+            inherit.aes = FALSE) +
+  xlab("total buy") +
+  geom_segment(aes(x=0,xend=(62.5-15),
+                   y=24,yend=24)) +
+  geom_segment(aes(x=(62.5+15),xend=124,
+                   y=24,yend=24)) +
+  geom_segment(aes(x=126,xend=125+0.5*(200-125)-15,y=16,yend=16)) +
+  geom_segment(aes(x=125+0.5*(200-125)+15,xend=200,y=16,yend=16)) +
+  ylab("AUR") +
+  ggtitle("Discount amount per unit retail") +
+  theme(axis.text=element_blank())
+```
+
+
+The total revenue across all units sold is then 
+
+
 
 Imagine that I have a magic box with a magic button and a set of dials. When the button is pressed, the box generates values of the total sales of a certain product in each of $K$ different regions for a specified period of time. The sales output of the box, though, is never the same The dials allow you to specify the ``state of the market'' in each region during the sales period. These dials control the specific relationship between influential factors, or _independent variables_ and total sales of a particular product. For example, the box might have four dials which control how each of the seasons affect sales in each region. In certain southern regions, we might set these dials so that winter has a strong, positive impact on sales if, for instance, there is an influx of tourism during the winter months that leads to a bump in sales. In northern regions, winter weather may dampen retail activity, so we may set the dial to generate sales given that we expect, say, a 30% decrease during winter months. Imagine that on the box, there are also dials for specifying the effect of all the other relevant independent variables such as population demographics and marketing spend, as well as dials specifying the relationship between past sales and future sales.  
 
