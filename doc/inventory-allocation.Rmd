@@ -77,7 +77,7 @@ Let's shift our focus back to the problem of inventory allocation. To forecast o
 
 Denote the _true demand_ during the pre-specified time period $d^*$. Retailers mark down prices to accelerate the rate of sales of inventory that hasn't been sold after a prespecified amount of time has passed. When the demand does not meet the buy, i.e. $d^* < b$, there are $b - d^*$ excess units to be sold. These units are sold at a price resulting in a lower AUR than during the planned sales period. 
 
-```{r, ref.label="discountAUR", echo=FALSE, fig.cap="A typical curve for describing the relationship between the price of excess units and the overstock quantity - the amount by which the buy exceeds demand.",fig.align="center",out.width = "190px",out.height="190px"}
+```{r, ref.label="discountAUR", fig.cap="A typical curve for describing the relationship between the price of excess units and the overstock quantity - the amount by which the buy exceeds demand.",fig.align="center",out.width = "190px",out.height="190px"}
 library(ggplot2)
 library(magrittr)
 
@@ -106,8 +106,9 @@ AUR <- ifelse(b<125,
               20,
               20*exp(-0.08*(b-125)))
 
+
 data.frame(buy=b,AUR=AUR) %>%
-     ggplot(., aes(x=buy,y=AUR)) +
+     ggplot(data.frame(buy=b,AUR=AUR), aes(x=buy,y=AUR)) +
      geom_line() +
      theme_minimal() +
   geom_vline(xintercept=125,
@@ -115,22 +116,8 @@ data.frame(buy=b,AUR=AUR) %>%
              colour="red") +
   geom_text(aes(label="b=d",
                 x=132, y=20),
-            inherit.aes = FALSE) +
-  geom_text(aes(label="b < d",
-                x=62.5, y=24),
-            inherit.aes = FALSE) +
-  geom_text(aes(label="b > d",
-                x=125+0.5*(200-125),
-                y=16),
-            inherit.aes = FALSE) +
-  xlab("total buy") +
-  geom_segment(aes(x=0,xend=(62.5-15),
-                   y=24,yend=24)) +
-  geom_segment(aes(x=(62.5+15),xend=124,
-                   y=24,yend=24)) +
-  geom_segment(aes(x=126,xend=125+0.5*(200-125)-15,y=16,yend=16)) +
-  geom_segment(aes(x=125+0.5*(200-125)+15,xend=200,y=16,yend=16)) +
-  ylab("AUR") +
+            inherit.aes = FALSE)
+  xlab("total buy")  ylab("AUR") +
   ggtitle("Discount amount per unit retail") +
   theme(axis.text=element_blank())
 ```
