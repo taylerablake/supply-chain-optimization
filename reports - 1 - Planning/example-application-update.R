@@ -4,7 +4,7 @@
 
 #Note: This is a scratch script that will be fully cleaned up later.
 
-#Author: Chris Holloman
+#Author: Tayler Blake
 
 library(ProjectTemplate)
 load.project()
@@ -15,8 +15,8 @@ set.seed(1977)
 n_time_periods <- 100
 
 # load HH locations generated from munge script
-load(file.path(getwd(),"cache","HH_samples.RData"))
-n_regions <- length(unique(HH_samples$region))
+#load(file.path(getwd(),"cache","HH_samples.RData"))
+#n_regions <- length(unique(HH_samples$region))
 
 
 # load HH locations generated from munge script
@@ -27,27 +27,27 @@ n_fulfill_centers <- length(unique(fulfill_centers_locations$fc))
 transfer_distances <- as.matrix(dist(fulfill_centers_locations[, c("lon", "lat")]))
 
 
-map <- get_map('United States',
-               zoom=4,
-               color="bw",
-               maptype='hybrid')
-ggmap(map, extent = 'device',
-      darken=0.2) +
-  geom_point(data=HH_samples,
-             aes(x=lon,
-                 y=lat,
-                 colour=factor(region)),
-             alpha=0.7,
-             size=0.6) +
-  geom_text(data=fulfill_centers_locations,
-            aes(x=lon,y=lat,label = fc),
-            color = "white",
-            size = 6,
-            fontface="bold") +
-  guides(colour=guide_legend("Region")) +
-  scale_colour_tableau('tableau10')
-ggsave("reports - 1 - Planning/white-paper-figures/ggmap-hh-fc-locations.png",
-       height = 4, width = 6)
+# map <- get_map('United States',
+#                zoom=4,
+#                color="bw",
+#                maptype='hybrid')
+# ggmap(map, extent = 'device',
+#       darken=0.2) +
+#   geom_point(data=HH_samples,
+#              aes(x=lon,
+#                  y=lat,
+#                  colour=factor(region)),
+#              alpha=0.7,
+#              size=0.6) +
+#   geom_text(data=fulfill_centers_locations,
+#             aes(x=lon,y=lat,label = fc),
+#             color = "white",
+#             size = 6,
+#             fontface="bold") +
+#   guides(colour=guide_legend("Region")) +
+#   scale_colour_tableau('tableau10')
+# ggsave("reports - 1 - Planning/white-paper-figures/ggmap-hh-fc-locations.png",
+#        height = 4, width = 6)
 
 
 #Define the posterior distribution of actual orders in different regions.
