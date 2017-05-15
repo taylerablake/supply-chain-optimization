@@ -3,6 +3,7 @@ library(maptools)
 library(sp)
 library(rgdal)
 library(ggmap)
+library(ggthemes)
 
 source(file.path(getwd(),"lib","latlon2state.R"))
 
@@ -98,12 +99,12 @@ map <- get_map('United States',
 
 ggmap(map,
       darken=0.2) +
-  # geom_point(data=HH_samples,
-  #            aes(x=lon,
-  #                y=lat,
-  #                colour=factor(region)),
-  #            alpha=0.7,
-  #            size=0.6) +
+  geom_point(data=HH_samples,
+             aes(x=lon,
+                 y=lat,
+                 colour=factor(region)),
+             alpha=0.7,
+             size=0.6) +
   geom_text(data=fulfill_centers_locations,
             aes(x=lon,y=lat,label = fc),
             color = "white", size = 6) +
