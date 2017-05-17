@@ -1,9 +1,3 @@
-library(maps)
-library(maptools)
-library(sp)
-library(rgdal)
-library(ggmap)
-library(ggthemes)
 
 source(file.path(getwd(),"lib","latlon2state.R"))
 
@@ -92,10 +86,28 @@ fulfill_centers_locations <- data.frame(grid_points[c(sample(which(grid_points$S
                                                            size=1)),c("lon","lat")],
                                         fc = 1:n_fulfill_centers)
 
-map <- get_map('United States',
-                     zoom=4,
-               color="bw",
-               maptype='hybrid')
+map.usa_country <- map_data("usa")
+ggplot() +
+  geom_polygon(data = map.usa_country,
+               aes(x = long, y = lat, group = group),
+               fill = "#484848") +
+  geom_point(data=HH_samples,
+             aes(x=lon,
+                 y=lat,
+                 colour=factor(region)),
+             alpha=0.7,
+             size=0.6) +
+  coord_map(projection = "albers", lat0 = 30, lat1 = 40, xlim = c(-121,-73), ylim = c(25,51)) +
+  labs(title = "Rivers and waterways of the United States") +
+  theme(panel.background = element_rect(fill = "#292929")
+        ,plot.background = element_rect(fill = "#292929")
+        ,panel.grid = element_blank()
+        ,axis.title = element_blank()
+        ,axis.text = element_blank()
+        ,axis.ticks = element_blank()
+        ,text = element_text(family = "Gill Sans", color = "#A1A1A1")
+        ,plot.title = element_text(size = 34)
+  ) 
 
 ggmap(map,
       darken=0.2) +
