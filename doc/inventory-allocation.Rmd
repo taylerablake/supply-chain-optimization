@@ -59,7 +59,7 @@ In the section to follow, we will provide a simple illustration of the uncertain
 
 \section{Solution: skinny in 3 weeks!}
 
-Forecasting is not a new concept in ecommerce. Retailers have been using statistical models to forecast sales for years. Howevever, to our knowledge, most of the products which support optimal inventory allocation calculation are leveraging _Bayesian_ methods: a collection of statistical tools which allow people to update their beliefs as they observe more data. Consider the following example: suppose a retailer is launching an email promotion for a particular product, and they believe that the campaign will result in a 40% conversion rate - that is, for every 100 customers who receive the promotional ad, 40 customers will purchase the promoted product through the email link. They launch the campaign, and upon completion, 
+Forecasting is not a new concept in ecommerce. Retailers have been using statistical models to forecast sales for years. Howevever, to our knowledge, most of the products which support optimal inventory allocation calculation are leveraging Bayesian methods which allow us to incorporate prior knowledge into predictions, as well as update beliefs as we observe more data. Consider the following example: suppose a retailer is launching an email promotion for a particular product, and they believe that the campaign will result in a 40% conversion rate - that is, for every 100 customers who receive the promotional ad, 40 customers will purchase the promoted product through the email link. They launch the campaign, and upon completion, 
 
 \begin{itemize}
 \item 100,000 customers recieved a promotional email, and 
@@ -181,21 +181,97 @@ By averaging over the $N$ samples, we assign allocation $a$ value
 \bar{\nu}_a = \frac{1}{N}\sum_{n=1}^N \nu_a^{\left(n\right)}.
 \]
 
-Generating a sample of allocation values in this way is known as _Monte Carlo simulation_, and it allows us to account for the variability in sales leftover after accounting for the predictor variables. This is not, however, the only variability that we need to consider because in practice, there is no crystal ball that will tell us the correct values of the model parameters - where to set the dials on the black box. These parameters are estimated using past sales data, and then 
+
+
+Generating a sample of allocation values in this way is known as _Monte Carlo simulation_, and it allows us to account for the variability in sales leftover after accounting for the predictor variables. This is not, however, the only variability that we need to consider. Like the future demand, in practice, model parameters are unknown, so we don't actually know exactly where to set the dials on the black box before outputting the sample of futures sales. The simplest remedy for this is to estimate the model parameters using past information. 
+
+
+```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE,fig.width = 3,fig.height=3,fig.align="center"}
+library(lubridate)
+library(ggplot2)
+library(magrittr)
+
+coffee_sales <- data.frame(weekly_high=seq(10,100,by=0.5),
+                           expected_units_sold=10 + 6*seq(10,100,by=0.5)) %>%
+  transform(.,units_sold=rpois(n=length(seq(10,100,by=0.5)), expected_units_sold))
+coffee_sales$units_sold[coffee_sales$weekly_high==95]<- coffee_sales$expected_units_sold[coffee_sales$weekly_high==95] +90
+coffee_sales$units_sold[coffee_sales$weekly_high==75]<- coffee_sales$expected_units_sold[coffee_sales$weekly_high==75] +70
+ggplot(data=coffee_sales,aes(x=weekly_high,y=units_sold)) +
+  geom_point() +
+  theme_minimal() +
+  theme(panel.grid = element_blank(),
+        panel.border = element_rect(colour="grey",fill=NA)) +
+  xlab("average weekly high") +
+  ylab("units sold") 
+
+```
+
+
+For example, suppose a coffee retailer has records weekly weather and the number of iced coffee units sold per week. Figure ~ displays the relationship between historical weekly sales and the weekly average high temperature. By fitting a statistical model to the historical data, we can infer where to place the dial controlling the parameter for weekly high temperature before using the box to output a sample from the future distribution of coffee sales. 
+
+```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE, fig.width = 8,fig.height=3,fig.align="center"}
+library(lubridate)
+library(ggplot2)
+library(ggthemes)
+library(magrittr)
+
+slopes <- seq(5.8,6.3,length.out=5)
+
+fits <- sapply(slopes,function(b) {
+  10+b*seq(10,100,by=0.5)
+}) %>% matrix(data=.,nrow=length(seq(10,100,by=0.5))*length(slopes),
+              ncol=1)
+fitted_df <- data.frame(expand.grid(weekly_high=seq(10,100,by=0.5),
+                                    slope=slopes),
+                        predicted_sales=fits,
+                        accuracy=" ")
+fitted_df <- rbind(fitted_df,data.frame(expand.grid(weekly_high=seq(10,100,by=0.5),
+                                                    slope=c(3,8)),
+                                        predicted_sales=sapply(c(3,8),function(b) {
+                                          10+b*seq(10,100,by=0.5)
+                                        }) %>% matrix(data=.,nrow=length(seq(10,100,by=0.5))*2,
+                                                      ncol=1),
+                                        accuracy=c(rep("too small",length(seq(10,100,by=0.5))),
+                                                   rep("too big",length(seq(10,100,by=0.5))))))
+fitted_df$accuracy <- factor(fitted_df$accuracy,
+                             levels=c("too small", " ", "too big"))
+
+ggplot(data=coffee_sales,
+       aes(x=weekly_high,
+           y=units_sold)) +
+  geom_point(alpha=0.6) +
+  theme_minimal() +
+  facet_wrap(~accuracy,nrow=1,
+             strip.position = "bottom") +
+  geom_line(data=fitted_df,
+            aes(x=weekly_high,
+                y=predicted_sales,
+                colour=slope,
+                group=slope),
+            inherit.aes = FALSE) +
+  guides(colour="none") +
+  xlab("average weekly high") +
+  ylab("units sold") +
+  scale_color_continuous_tableau() +
+  theme(panel.grid.minor=element_blank(),
+        panel.grid.major = element_blank(),
+        panel.border = element_rect(colour="grey",fill=NA),
+        axis.text.x = element_blank())
+
+```
+[TODO : Insert muted melon dials set to appropriate parameter value below each facet block, cut off the facet labels]
 
 
 
-For simplicity of modeling, we assume that forecasting for the SKU of interest has been performed taking a Bayesian approach, so the retailer has posterior distributions for each of the parameters in the forecasting model.  Denote the historical demand data from which the forecasting model was constructed $\mathbf{Y}$ and the historical independent variables used to predict demand $\mathbf{X}$.  Denote the set of parameters in the model $\boldsymbol{\theta}$.  Using a Bayesian approach, the forecasting model has a posterior distribution for $\boldsymbol{\theta}$,
+```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE, out.width="490px",out.height="290px",fig.align="center"}
+knitr::include_graphics("img/black-box-dial-tune.png")
+```
 
-$$\pi (\boldsymbol{\theta} \mid \mathbf{Y}, \mathbf{X}) \propto \pi (\mathbf{Y} \mid \boldsymbol{\theta}, \mathbf{X}) \pi (\boldsymbol{\theta}).$$
+Figure~ shows how adjusting the parameter values changes the form of the relationship between sales and temperature. Some curves (and hence their corresponding parameter values) appear to be more supported by the data than others. The green curve fits the historical data very well, so it is very likely that those parameter values are close to the parameters that were used to generate the data. If we were to set the dials to these values and output several samples of sales, to which we could compare the historical data and reasonably conclude that each of the curves were produced by the same machine. The blue curve does not fit the data quite as well, but it still appears to approximate the relationship between sales and temperature reasonably well, so it is somewhat likely that those parameter values could be the correct ones. The red curve is the least satisfactory fit to the historical data. For each of the blue and green curves, we could repeat the same investigation as with the green curve. For each group of samples, how likely is it that the historical data and the new samples came from the same machine?    
 
-\noindent For the purpose of forecasting future sales, we assume that future values of the independent variables are known.  We denote those future values $\mathbf{X}^*$.  Similarly, we denote future values of demand $\mathbf{Y}^*$.  The predictive distribution of $\mathbf{Y}^*$ is
+[TODO: add picture here to show how to use the posterior weights to construct my sample from $\pi\left(Y^* \vert Y,X,X^*\right)$. ]
 
-$$\pi (\mathbf{Y}^* \mid \mathbf{X}^*, \mathbf{Y}, \mathbf{X}) = \int_{\boldsymbol{\Theta}} \pi (\mathbf{Y}^* \mid \boldsymbol{\theta}, \mathbf{X}^*) \pi (\boldsymbol{\theta} \mid \mathbf{Y}, \mathbf{X}) d \boldsymbol{\theta}$$.
-
-\noindent We assume that forecasting is performed over a finite set of time points, $1, \ldots, T$ within each region.  The forecast in region $k$ at time $t$ is denoted $Y_{kt}^*$.  The total demand across all time points and regions is denoted $D^*$, and
-
-$$D^* = \sum_{t = 1}^T \sum_{k = 1}^K Y_{kt}^*.$$
+We could produce many more curves that fit the data well and represent reasonable candidate parameter settings, so how do I choose just one specification of the dials to obtain a sample of sales? Rather than select just one configuration of the dials and obtaining our sample from one setting of the machine, we can account for our uncertainty in the parameter settings by constructing our sample from a mixture of the outputs from each setting. But rather than giving  each dial configuration the same weight in the mixture, we give larger weight to machines with parameters that are more likely to have produced the historical data. Output obtained from the machine with dials set to the parameters of the green curve would have high weight, while output from the machine with the blue configuration would have slightly less weight. Though not likely, it's still possible that the output from the machine set to the red parameter values could have produced the historical data, so we allow that output to contribute to the sample, but place lower weight on these samples. Sampling future sales so that we consider each parameter value in proportion to how likely is it that that value is the correct one - given the historical data is the cornerstone of Bayesian forecasting. By taking into consideration every ``what-if'' case, we can account for prediction uncertainty that standard statistical approaches cannot.
 
 
 ```{r,echo=FALSE, fig.align="center",out.width = "290px",out.height="290px"}
