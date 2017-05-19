@@ -59,23 +59,16 @@ In the section to follow, we will provide a simple illustration of the uncertain
 
 \section{Solution: skinny in 3 weeks!}
 
-Forecasting is not a new concept in ecommerce. Retailers have been using statistical models to forecast sales for years. Howevever, to our knowledge, most of the products which support optimal inventory allocation calculation are leveraging Bayesian methods which allow us to incorporate prior knowledge into predictions, as well as update beliefs as we observe more data. Consider the following example: suppose a retailer is launching an email promotion for a particular product, and they believe that the campaign will result in a 40% conversion rate - that is, for every 100 customers who receive the promotional ad, 40 customers will purchase the promoted product through the email link. They launch the campaign, and upon completion, 
+While optimizing retail supply chain and inventory allocation is not a new concern for retailers, to our knowledge, most of the existing products providing solutions to these problems aren't leveraging Bayesian methods. Bayesian techniques are a subset of statistical techniques that naturally permit accounting for all of the uncertainty in a forecast that will be used to determine an optimal business action. These methods also naturally allow one to incorporate prior knowledge into predictions and update these beliefs as more data is observed. Consider the following example: suppose a retailer is launching an email promotion for a particular product, and they believe that the campaign will result in a 40% conversion rate - that is, for every 100 customers who receive the promotional ad, 40 customers will purchase the promoted product through the email link. They launch the campaign, and upon completion, 
 
 \begin{itemize}
 \item 100,000 customers recieved a promotional email, and 
 \item 10,000 customers made a purchase. 
 \end{itemize}
 
-The retailer plans to launch a similar campaign for an analogous product. If you were asked to predict the coversion rate for the new campaign, Would you predict the same 40% conversion rate? Perhaps the Bayesian methods us to incorporate _prior belief_ about products and the market as well as update this belief as we observe actual sales. 
+The retailer plans to launch a similar campaign for an analogous product. If you were asked to predict the coversion rate for the new campaign, would you predict the same 40% conversion rate? Perhaps the Bayesian methods us to incorporate prior belief about products and the market as well as update this belief as we observe actual sales. 
 
-Let's shift our focus back to the problem of inventory allocation. To forecast online sales, we start with a set of households. Together, these households constitute the entire product market. While we could forecast purchases for each household in the market, forecasts are typically built on an aggregated level. For example, we might predict sales within political boundaries (\emph{e.g.,} county or state) or within designated marketing areas. These aggregated geographic areas _partition_ the market: each household belongs to exactly one of the specified regions, and together, the regions cover the entire market area. The first component of optimizing inventory allocation is to determine how much total inventory to buy. The value associated with a particular allocation scheme relies on
-\begin{itemize}
-\item the total demand, 
-\item the total buy, and
-\item the allocation of the buy.
-\end{itemize}
-
-Denote the _true demand_ during the pre-specified time period $d^*$. Retailers mark down prices to accelerate the rate of sales of inventory that hasn't been sold after a prespecified amount of time has passed. When the demand does not meet the buy, i.e. $d^* < b$, there are $b - d^*$ excess units to be sold. These units are sold at a price resulting in a lower AUR than during the planned sales period. 
+The total buy must be determined before choosing how to best divide the total inventory among the available fulfillment centers. Denote the _true demand_ during the pre-specified time period $d^*$. Retailers mark down prices to accelerate the rate of sales of inventory that hasn't been sold after a prespecified amount of time has passed. When the demand does not meet the buy, i.e. $d^* < b$, there are $b - d^*$ excess units to be sold. Excess units are sold at a price resulting in a lower AUR than during the planned sales period. 
 
 ```{r echo=FALSE, fig.cap="A typical curve for describing the relationship between the price of excess units and the overstock quantity - the amount by which the buy exceeds demand.",fig.align="center",out.width = "190px",out.height="190px"}
 library(ggplot2)
@@ -92,7 +85,7 @@ data.frame(overstock=seq(0,100),
      theme(axis.text=element_blank())
 ```
 
-We assume that the AUR for excess units can be expressed using some _markdown_ function $m$. A typical choice for a function describing the relationship is displayed in Figure~. For a product with an AUR of \$$r$, the total revenue is given by  
+We assume that the AUR for excess units can be expressed using some markdown function $m$. A typical choice for a function describing the relationship is displayed in Figure~. For a product with an AUR of \$$r$, the total revenue is given by  
 
 \[
 \mbox{revenue} = \left\{\begin{array}{lr}
@@ -107,7 +100,7 @@ Revenue is maximized when the buy is equal to the demand, so forecasting the tot
 knitr::include_graphics("img/toy-example-map.png")
 ```
 
-Delivery costs and predicted demand in each region drive the allocation of inventory among fulfillment centers, from which product will be shipped to households. The cost of fulfillment center $f$ fulfilling an order to household $h$ may be expressed as the sum of three individual costs: the fixed cost of fulfilling a single order, the cost of shipping an order one unit distance, and the cost incurred each day required for the customer to receive the order.
+The total buy is determined using a forecast for the total demand over the entire market, but in practice, the predicted total demand is constructed by adding up the predicted demand over a set of geographic areas which _partition_ the market: each household belongs to exactly one of the specified regions, and together, the regions cover the entire market area. For example, we might predict sales within political boundaries (\emph{e.g.,} county or state) or within designated marketing areas. Delivery costs and predicted demand in each region drive the allocation of inventory among fulfillment centers, from which product will be shipped to households. Order fulfillment in a given region is carried out by the nearest fulfillment center in order to minimize costs associated with fulfilling the order. The cost of fulfillment center $f$ fulfilling an order to household $h$ may be expressed as the sum of three individual costs: the fixed cost of fulfilling a single order, the cost of shipping an order one unit distance, and the cost incurred each day required for the customer to receive the order.
 
 \begin{align*}
 c \left(f, h\right) &= \mbox{fixed cost} + \mbox{cost of distance traveled} + \mbox{cost of delivery time}. \\
