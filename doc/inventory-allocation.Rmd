@@ -94,13 +94,13 @@ We assume that the AUR for excess units can be expressed using some markdown fun
 \end{array}\right.
 \]
 
-Revenue is maximized when the buy is equal to the demand, so forecasting the total number of units sold across the entire market is critical. 
+When the demand exceeds the buy, we make $\$r$ for each of the $b$ units sold, however, a retailer relinquishes $\$r$ for every unit that they underbuy. If a retailer overbuys, then revenue is compromised because the price must be discounted to clear excess stock. Revenue is maximized when the buy is equal to the demand, so forecasting the total number of units sold across the entire market is critical. 
 
 ```{r,echo=FALSE, fig.align="center"}
 knitr::include_graphics("img/toy-example-map.png")
 ```
 
-The total buy is determined using a forecast for the total demand over the entire market, but in practice, the predicted total demand is constructed by adding up the predicted demand over a set of geographic areas which _partition_ the market: each household belongs to exactly one of the specified regions, and together, the regions cover the entire market area. For example, we might predict sales within political boundaries (\emph{e.g.,} county or state) or within designated marketing areas. Delivery costs and predicted demand in each region drive the allocation of inventory among fulfillment centers, from which product will be shipped to households. Order fulfillment in a given region is carried out by the nearest fulfillment center in order to minimize costs associated with fulfilling the order. The cost of fulfillment center $f$ fulfilling an order to household $h$ may be expressed as the sum of three individual costs: the fixed cost of fulfilling a single order, the cost of shipping an order one unit distance, and the cost incurred each day required for the customer to receive the order.
+The total buy is determined from the predicted total demand over the entire market. In practice, the predicted total demand is constructed by breaking up the market into a set of geographic areas and adding up the predicted demand for each of the individual regions. The regions are designated so that they partition the market - that is, any household within the product market belongs to exactly one of the specified regions, and each region contains at least one household. For example, we might predict sales within political boundaries (\emph{e.g.,} county or state) or within designated marketing areas. Predicted demand in each region drives the division of the total buy among fulfillment centers, with order fulfillment in a given region carried out by the nearest fulfillment center so as to minimize costs associated with order fulfillment. The cost of fulfillment center $f$ fulfilling an order to household $h$ may be expressed as the sum of three individual costs: the fixed cost of fulfilling a single order, the cost of shipping an order one unit distance, and the cost incurred each day required for the customer to receive the order.
 
 \begin{align*}
 c \left(f, h\right) &= \mbox{fixed cost} + \mbox{cost of distance traveled} + \mbox{cost of delivery time}. \\
