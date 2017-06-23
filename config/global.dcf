@@ -1,11 +1,12 @@
-version: 0.6
-data_loading: TRUE
-cache_loading: TRUE
+version: 0.7
+data_loading: FALSE
+cache_loading: FALSE
 recursive_loading: FALSE
-munging: TRUE
+munging: FALSE
 logging: FALSE
 load_libraries: TRUE
-libraries: reshape2, plyr, ggplot2, stringr, lubridate, AAPtools, scales, rgdal, sp, maps, maptools, ggmap, ggthemes
+libraries: reshape2, plyr, ggplot2, stringr, lubridate, AAPtools, scales, rgdal, sp, maps,
+          maptools, ggmap, ggthemes
 as_factors: TRUE
 data_tables: FALSE
 attach_internal_libraries: FALSE
