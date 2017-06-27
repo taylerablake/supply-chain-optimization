@@ -70,3 +70,5 @@ ggplot() +
   table(toy_closest_delivery)
   
     
+
+  
