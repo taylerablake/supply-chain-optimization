@@ -7,6 +7,7 @@ library(ggmap)
 
 source(file.path(getwd(),"lib","latlon2state.R"))
 
+myYear <- 2016
 pop_by_county <- read.csv(file.path(getwd(),
                                    "data",
                                    "census",

@@ -1,6 +1,3 @@
-library(ProjectTemplate)
-load.project()
-
 set.seed(1977)
 
 #Set a time range
@@ -132,10 +129,6 @@ fc_expected_fulfillment <- ddply(data.frame(fc = fc_region_assignments,
 
 ####################################################################################################
 ####################################################################################################
-
-library(doParallel)
-library(foreach)
-library(parallel)
 
 cl <- makePSOCKcluster(detectCores()-2)
 registerDoParallel(cl)
