@@ -8,67 +8,38 @@ output:
 
 ---
 
-
-
-\section{Introduction}
-
-In 2016, e-commerce sales totaled an estimated $394.9 billion, accounting for 8.1 percent of total annual sales. This total was a 15 percent increase from 2015. Advances in technology and adoption of the internet has forced the retail industry to make dramatic shifts toward e-commerce. While this presents a tremendous opportunity for business growth, the cost associated with inefficiencies in supply chains makes optimally allocating inventory to fulfillment centers integral to retailers' success. Customer retention and loyalty requires the business to deliver products quickly and efficiently, so inventory allocation to fulfillment centers must account for two primary factors:
+In 2016, e-commerce sales totaled an estimated $394.9 billion, accounting for 8.1 percent of total annual sales. This total was a 15 percent increase from 2015. Advances in technology and adoption of the internet have forced the retail industry to make dramatic shifts toward e-commerce. While this change presents a tremendous opportunity for business growth, the cost associated with inefficiencies in supply chains makes optimally allocating inventory to fulfillment centers integral to retailers' success. Customer retention and loyalty requires the business to deliver products quickly and efficiently, so inventory allocation to fulfillment centers must account for two primary factors:
 
 + item cost of delivering units from fulfillment centers to delivery addresses
 + length of time required to fulfill orders to delivery addresses from fulfillment centers
 
-While the first of these costs can be associated with a particular dollar value, the cost related to the second consideration is driven by customer disatisfaction with delayed product arrivals and is more difficult to quantify. Additionally, there are a host of other factors to be considered when optimizing inventory allocation. These include the cost of transferring units between fulfillment centers to respond to shifts in demand, as well as decisions about whether to fulfill online orders from stores instead of dedicated fulfillment centers. In the following sections, we propose a method to determine the proper allocation of inventory to fulfillment centers. Our method assumes that no transfers are
-made between fulfillment centers and that e-commerce orders are fulfilled only from dedicated fulfillment centers and no orders will be fulfilled by stores, however, potential future work could be explored by relaxing these assumptions.
+While the first of these costs can be associated with a particular dollar value, the cost related to the second consideration is driven by customer disatisfaction with delayed product arrivals and is more difficult to quantify. Additionally, there are a host of other factors to be considered when optimizing inventory allocation, including the cost of transferring units between fulfillment centers to respond to shifts in demand and the decision of whether to fulfill an order from a store instead of a fulfillment center.
 
+In this research brief, we describe a method to determine the best allocation of inventory to fulfillment centers after a total buy has been determined.
 
-\subsection{ [Typical Solution] How they work:}
+\section{ [Typical Solutions]: How they work}
 
-There are several products on the market for supply chain optimization. Many of those products are outfitted with the functionality for determining efficient allocation of inventory to distribution centers. We can decompose the common approach to optimizing inventory allocation into two primary tasks: predicting future inventory demand and then given this forecast, develop a plan to purchase and distribute products so as to meet the demands at each fulfillment center in the most cost efficient way possible.
+There are several products on the market for supply chain optimization. Many of those products are outfitted with the functionality for determining efficient allocation of inventory to distribution centers. These products usually perform two tasks: (1) predicting future demand and (2) developing a plan to purchase and distribute products to meet demand as efficiently as possible.
 
-Demand predictions are made by fitting statistical models using past demand as well as predicted future events to forecast future demand. Often, these forecasts are done using data that has been aggregated to a fairly high level, such as by week, subpopulation of customers, category of merchandise, etc, though new technical ability to store and access large amounts of data quickly allows demand forecasting to be done at a far more granular level, such as at the daily level, per item per customer. Safety stock is the extra stock kept on hand to mitigate rish of inventory depletion due to unpredictability in demand. 
+Demand predictions are made by developing statistical models based on past demand values. Often, these forecasts are done using data that has been aggregated to a fairly high level, such as by week, subpopulation of customers, or category of merchandise. After demand has been estimated, an actual buy (total inventory) is determined by adding safety stock to the estimate. Determining how this inventory is distributed is then done deterministically; the center that will fulfill each online order is determined using a set of rules which specify the logic necessary for minimizing cost.
 
-The \textit{service level} refers to the probability of the period-specific demand quantity exceeding the inventory quantity on hand:
+\section{ [Typical Solutions]: Why they suck} 
 
-\[
-Prob\left(\mbox{period demand} \le \mbox{available inventory stock}\right).
-\]
+Despite the numerous existing applications offering solutions to the allocation problem, inventory allocation inefficiencies are still quite prevelant across retail supply chains. The key weakness in these solutions is that they don't account for uncertainty in the demand forecast correctly due to overly rigid assumptions.  For example, it is commonly assumed that safety stock should be proportional to the standard deviation of the demand. It is also common in the existing market for software solutions to assume that the demand at a given fulfillment center is independent from week to week, i.e. that the demand in the current week contains no useful information for predicting demand for the week to follow. Both of these assumptions are invalidated by the classic example of the trendsetter - she purchases an item and after wearing it demand increases dramatically as the crowd follows her.
 
-Setting safety stock levels appropriately is critical to minimizing costs. Typically, the amount of safety stock is chosen so that the probability of not meeting customer demand is low, based on the predicted sales. Loss is incurred due to incorrect forecasts by when
+Even when all the assumptions of a forecasting model are reasonable, there is uncertainty in demand.  This uncertainty comes from two sources: random variation in demand and uncertainty about the model we use to make predictions. Most existing inventory allocation tools determine the best allocation of inventory assuming that this prediction error doesn't exist. This failure to account for the uncertainty can lead to suboptimal allocation of inventory, leading to loss incurred due to fulfillment centers with overstock or inability to fulfill customer orders where the demanded exceed projections.
 
-\begin{itemize}
-\item demand is overestimated, leading to excess inventory which will be wasted or discounted, or when
-\item demand is underestimated, resulting in missed sales opportunities and unsatisfactory customer experience.
-\end{itemize}
+\section{[Solution]: Skinny in 6 weeks!}
 
-Once they specify the service level and forecast sales, retailers determine the safety stock levels and the corresponding product _buy_ $b$ - the total amount of product to purchase for order fulfillment. Determining how this inventory is distributed is then a deterministic task - there is little to no uncertainty associated with which fulfillment center is most optimal for shipping a given order. The center that will fulfill each online order is determined using a set of rules which specify the logic necessary for minimizing 
+Optimizing inventory allocation is not a new concern for retailers, so it's interesting that there is so little variety in available solutions.  Futhermore, most of the existing products providing solutions to these problems aren't leveraging Bayesian methods.  Bayesian methods are a set of statistical techniques that naturally account for all of the uncertainty in a forecast, so they are a natural fit for the problem at hand.
 
-\begin{itemize}
-\item the cost of shipping orders from fulfillment centers to delivery locations and
-\item the length of time required for products to be delivered to the customer. 
-\end{itemize}
+As with all inventory allocation software, we begin by determining the total buy.  To determine the buy, we take the following steps:
 
-Using the set of rules that determines which fulfillment center will fulfill orders from households in which regions, the task of allocating inventory is simply a matter of executing some straighforward bookkeeping. We do not seek to optimize this set of rules. Instead, we aim to address the difficulty in choosing an optimal allocation presented by the uncertainty in the forecasted demand for each fulfillment center territory.
+1. Quantify our prior knowledge about the process generating demand.  Specifying prior knowledge is a requirement for Bayesian modeling with several advantages and disadvantages relative to classical modeling techniques.
+2. Fit the model to historical data.
+3. Pick a total buy that guarantees a particular service level (i.e., probability that the demand will not exceed the buy).
 
-\subsection{Typical Solutions: Why they suck} 
-
-Despite the numerous existing applications offering solutions to the allocation problem, inventory allocation inefficiencies are still quite prevelant across retail supply chains. The difficulty in accounting for demand forecast uncertainty is the root of the underperformance of many tools on the market. Many of these tools overly simplify this uncertainty in various ways. Many rely on rigid assumptions about the distribution of future product demand for a given fulfillment center. For example, many universally accepted methods assume that safety stock is proportional to the standard deviation of the demand, which is assumed to follow a Normal distribution. It is also common in the existing market for software solutions to assume that the demand at a given fulfillment center is independent from week to week, i.e. that the demand in the current week contains no useful information for predicting demand for the week to follow. In most practical situations, this assumption is invalid due to the innate dependency between time and demand. The classic example is the trendsetter: she purchases an item and after wearing it, the crowd follows suit and demand for a given product increases until it reaches a certain point at which the market is saturated. Invalid assumptions about the variability in demand inhibit the ability to adequately quantify the uncertainty with predicted demand. Characterizing this variability faithfully is integral to specifying the initial product buy and allocation to each fulfillment center. 
-
-Even when all the assumptions of a forecasting model can be verified to be reasonable, there is still uncertainty associated with both future predicted demand as well as the model we use to make these predictions. Most existing inventory allocation tools determine the best initial allocation of inventory to fulfillment centers by assuming that this prediction error doesn't exist. Unfortunately, the allocation quantities inherit the uncertainty in the demand forecast used to determine these quantities. Failure to account for the uncertainty can lead to suboptimal allocation of inventory, leading to loss incurred due to fulfillment centers with overstock or inability to fulfill customer orders where the demanded exceed projections.
-
-In the section to follow, we will provide a simple illustration of the uncertainty associated with an inventory allocation specification. We propose adjusting for this uncertainty by employing a Bayesian approach to statistical modeling which allows retailers to consider all of the _what-ifs_ when forecasting sales and allocating the corresponding appropriate inventory quantities. 
-
-\section{Solution: skinny in 3 weeks!}
-
-While optimizing retail supply chain and inventory allocation is not a new concern for retailers, to our knowledge, most of the existing products providing solutions to these problems aren't leveraging Bayesian methods. Bayesian techniques are a subset of statistical techniques that naturally permit accounting for all of the uncertainty in a forecast that will be used to determine an optimal business action. These methods also naturally allow one to incorporate prior knowledge into predictions and update these beliefs as more data is observed. Consider the following example: suppose a retailer is launching an email promotion for a particular product, and they believe that the campaign will result in a 40% conversion rate - that is, for every 100 customers who receive the promotional ad, 40 customers will purchase the promoted product through the email link. They launch the campaign, and upon completion, 
-
-\begin{itemize}
-\item 100,000 customers recieved a promotional email, and 
-\item 10,000 customers made a purchase. 
-\end{itemize}
-
-The retailer plans to launch a similar campaign for an analogous product. If you were asked to predict the coversion rate for the new campaign, would you predict the same 40% conversion rate? Perhaps the Bayesian methods us to incorporate prior belief about products and the market as well as update this belief as we observe actual sales. 
-
-The total buy must be determined before choosing how to best divide the total inventory among the available fulfillment centers. Denote the _true demand_ during the pre-specified time period $d^*$. Retailers mark down prices to accelerate the rate of sales of inventory that hasn't been sold after a prespecified amount of time has passed. When the demand does not meet the buy, i.e. $d^* < b$, there are $b - d^*$ excess units to be sold. Excess units are sold at a price resulting in a lower AUR than during the planned sales period. 
+It's important to recognize that overbuying and underbuying are not equally bad.  When demand exceeds the buy, the retailer misses out on possible sales.  When the opposite happens, the retailer must mark down prices to accelerate the rate of sales, so excess units are sold at a price resulting in a lower AUR than during the planned sales period. Figure 1 shows a typical relationship between excess quantity and AUR - for greater excess, more markdown is required, resulting in a lower AUR.
 
 ```{r echo=FALSE, fig.cap="A typical curve for describing the relationship between the price of excess units and the overstock quantity - the amount by which the buy exceeds demand.",fig.align="center",out.width = "190px",out.height="190px"}
 library(ggplot2)
@@ -79,35 +50,19 @@ data.frame(overstock=seq(0,100),
      ggplot(., aes(x=overstock,y=sale_AUR)) +
      geom_line() +
      theme_minimal() +
-     xlab("excess quantity") +
+     xlab("Excess quantity") +
      ylab("AUR") +
      ggtitle("Discount amount per unit retail") +
      theme(axis.text=element_blank())
 ```
 
-We assume that the AUR for excess units can be expressed using some markdown function $m$. A typical choice for a function describing the relationship is displayed in Figure~. For a product with an AUR of \$$r$, the total revenue is given by  
+Based on this relationship between the buy, demand, and markdown, we can describe revenue for different scenarios.  When the buy is less than demand, total revenue is the buy times AUR.  When the buy is more than demand, total revenue is demand times (full-price) AUR plus some function of the excess buy and required markdown.  In reality, we don't know what the demand will be, so there is uncertainty about which of these scenarios will play out for a particular product.
 
-\[
-\mbox{revenue} = \left\{\begin{array}{lr}
-\;\;\;b r & \mbox{when demand exceeds the buy}.  \\
-\underbrace{\left[ r d^* \right]}_{\substack{full\;price\\ revenue}} + \underbrace{\left[ m\left( b,d^* \right) \right]}_{\substack{discounted \\ revenue}} & \mbox{when the buy exceeds demand.}
-\end{array}\right.
-\]
+Typically, demand is modeled and predicted separately in different regions  Then, predicted total demand is calculated by adding up the predicted demand for each of the individual regions. For example, we might predict sales within political boundaries (\emph{e.g.,} county or state) or within designated marketing areas.
 
-When the demand exceeds the buy, we make $\$r$ for each of the $b$ units sold, however, a retailer relinquishes $\$r$ for every unit that they underbuy. If a retailer overbuys, then revenue is compromised because the price must be discounted to clear excess stock. Revenue is maximized when the buy is equal to the demand, so forecasting the total number of units sold across the entire market is critical. 
+Predicted demand in each region drives allocation of the total buy among fulfillment centers.  However, there is not a straightforward relationship between the two.  Because the ultimate goal is to fulfill all orders with minimal cost, fulfillment centers may serve multiple regions or just part of a region.  In general, the cost of fulfilling an order from a fulfillment center is the sum of three individual costs: the fixed cost of fulfilling the single order, the cost of shipping the order different distances, and the cost incurred each day required for the customer to receive the order.
 
-```{r,echo=FALSE, fig.align="center"}
-knitr::include_graphics("img/toy-example-map.png")
-```
-
-The total buy is determined from the predicted total demand over the entire market. In practice, the predicted total demand is constructed by breaking up the market into a set of geographic areas and adding up the predicted demand for each of the individual regions. The regions are designated so that they partition the market - that is, any household within the product market belongs to exactly one of the specified regions, and each region contains at least one household. For example, we might predict sales within political boundaries (\emph{e.g.,} county or state) or within designated marketing areas. Predicted demand in each region drives the division of the total buy among fulfillment centers, with order fulfillment in a given region carried out by the nearest fulfillment center so as to minimize costs associated with order fulfillment. The cost of fulfillment center $f$ fulfilling an order to household $h$ may be expressed as the sum of three individual costs: the fixed cost of fulfilling a single order, the cost of shipping an order one unit distance, and the cost incurred each day required for the customer to receive the order.
-
-\begin{align*}
-c \left(f, h\right) &= \mbox{fixed cost} + \mbox{cost of distance traveled} + \mbox{cost of delivery time}. \\
-\end{align*}
-
-
-Consider a simple scenario: a retailer has two fulfillment centers available for distributing orders to locations across the continental US. The map in Figure~ shows the locations of these fulfillment centers and a sample of possible locations to which the retailer will need to ship product.
+Consider a simple scenario: a retailer has two fulfillment centers available for distributing orders to locations across the continental US. The map in Figure 2 shows the locations of these fulfillment centers and a sample of possible locations to which the retailer will need to ship product.  In this figure, color shows the region (east or west) at which demand was forecasted, which may not be the same as the regions served most efficiently by the two fulfillment centers.
 
 ```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE}
 
@@ -127,57 +82,32 @@ load(file.path(getwd(),"..","cache","toy_fulfill_centers_locations.RData"))
   #table(toy_closest_delivery)
 ```
 
-Suppose that the retailer was able to perfectly predict the total demand over the sales period, and specified the total buy is equal to the total demand. ...
-...
+As an initial thought experiment, let's suppose we know exactly which households are going to order our product (and, by extension, exactly what demand will be).  In addition, we know all of the rules we get to set about our business: what the AUR is before markdowns (approximately, since we set price), the discounting that will be applied to excess inventory, the rules for determining which fulfillment center will fulfill orders from each address, and the costs associated with fulfilling an order from each fulfillment center.  Having all this information, we can calculate how good a particular allocation of units to fulfillment centers is.  We call this the \emph{value} of an allocation  As a simple example, let's say we allocate all the inventory to fulfillment center 1.  The value of this allocation is the revenue (average AUR times demand) minus the sum of delivery costs to households from fulfillment center 1.  We can calculate this value for any allocation, so we can find the optimal allocation via any of several standard optimization algorithms.
 
+Things get more complex once we incorporate the various sources of uncertainty.  Even if we knew exact demand, we would have uncertainty about which households would place orders.  On top of that, we have uncertainty about what the exact demand will be from the two sources described earlier: uncertainty about our model and uncertainty about random forces influencing actual demand.
 
-Given an AUR value, the discounting applied to excess inventory, an initial allocation $\alpha_{10}$ and $\alpha_{20}$, the rules for determining the region to which each fulfillment center is assigned, the costs associated with fulfilling an order, and the demand in each region, we can calculate the monetary value $\nu$ of an allocation rule: 
+\subsection{Why do we want to average over parameter values?}
 
-\begin{align}
-\mbox{value of allocation} = \nu(\alpha_{10}, \alpha_{20}, y_1^*, y_2^*) &= \mbox{total revenue} \nonumber\\
-&- \mbox{cost of fulfilling orders in Region 1 from center 1} \nonumber \\
-&- \mbox{cost of fulfilling orders in Region 2 from center 2} \label{eq:allocation_value}
-\end{align}
+There is a statistical paradigm, Bayesian statistics, that provides a natural way of accounting for all the sources of uncertainty in demand prediction. To understand how this approach is different from traditional methods and what advantages it providse in this situation, we first need to understand the different sources of uncertainty in predicted demand (and, thus, in our estimated value of an allocation).
 
-An initial allocation $\left(\alpha^1_{10}, \alpha^1_{20}\right)$ having value $\nu_1$ is better than an alternative initial allocation $\left(\alpha^2_{10}, \alpha^2_{20}\right)$ having value $\nu_2$ if $\nu_1 > \nu_2$.   
+As an analogy, imagine that I have a magic box with a button and a set of dials. When the button is pressed, the box generates values of (potential) total sales in each of the two regions.  The dials allow you to specify the ``state of the market'' in each region during the time that the product will be sold; they control the specific relationship between influential factors and total sales. For example, the box might have four dials which control how each of the seasons affect sales. Imagine that on the box there are also dials for specifying the effect of all the other influential factors, such as population demographics and marketing spend, as well as dials for specifying the relationship between past sales and future sales.  
 
-## Why do we want to average over parameter values?
-
-Unfortunately, calculating $\nu_1$ and $\nu_2$ requires knowing the value of future sales in each region, which is unaccessible. Instead, one substitutes predicted future demand for the actual future demand to perform the calculation. Since the value of an allocation will depend on predicted demand, it inherits the uncertainty that we have in predicted demand. We need a way to account for this uncertainty when identifying the allocation with the best value $\nu$. Bayesian methods are a class of statistical techniques that provide a natural way of accounting for uncertainty in demand prediction. To understand how this approach are different from traditional methods and what advantages they provide in this situation, we first need to understand the different sources of uncertainty in predicted demand (and thus, in our estimated value of an allocation.)
-
-```{r,echo=FALSE, fig.align="center",out.width = "190px",out.height="190px"}
-knitr::include_graphics("img/parameter-control-panel.png")
-```
-
-Imagine that I have a magic box, and on the box is a magic button and a set of dials. When the button is pressed, the box generates values of total sales in each of the two regions.  The dials allow you to specify the ``state of the market'' in each region during the time that the product will be sold; they control the specific relationship between influential factors, or _independent variables_ and total sales. For example, the box might have four dials which control how each of the seasons affect sales in each region. In certain southern regions, we might set these dials so that winter has a strong, positive impact on sales if, for instance, there is an influx of tourism during the winter months that leads to a bump in sales. In northern regions, winter weather may dampen retail activity, so we may set the dial to generate sales given that we expect, say, a 30% decrease during winter months. Imagine that on the box, there are also dials for specifying the effect of all the other relevant independent variables such as population demographics and marketing spend, as well as dials for specifying the relationship between past sales and future sales.  
-
-```{r echo=FALSE, fig.align="center",out.width = "290px",out.height="290px"}
+```{r echo=FALSE, fig.align="center",out.width = "290px",out.height="290px",fig.cap="A lovely magical box."}
 knitr::include_graphics("img/black-box-sales-output.png") 
 ```
 
-In the context of statistical modeling, the dials control the values of the _model parameters_, $\theta_1,\theta_2,\dots, \theta_p$. We denote the collection of parameters by $\boldsymbol{\theta}$. The box, however, does not output _deterministic_ values; without changing any of the dial settings, if I press the magic button multiple times, the box will produce different output. Repeatedly pressing the button generates a set of values according to the _distribution_ of sales; values with higher frequency are more likely to occur given the conditions specified by the dials. This process of generating potential values for sales according to how likely the value is to be observed is called _sampling_ from the distribution of sales.  Figure~\ref{fig:black-box-sales-output} shows what the result of sampling  100 values from the distribution of sales might look like. 
+In the context of statistical modeling, the dials control the values of the _model parameters_.  Setting these dials a particular way doesn't guarantee a specific demand outcome - if I press the magic button multiple times, the box will produce different output.  Some of these outcomes (the ones in line with historical trends) are more likely to be generated than others, but we can't predict exactly what we'll get.  Figure~\ref{fig:black-box-sales-output} shows what the result of pressing the button 100 times might look like. 
 
-The variability in the box's output is referred to as the _intrinsic variance_ in sales - the variability in units sold even knowing the model parameters that govern how the box produces the values. While this may seem concerning, we need not worry: standard statistical methods give us the tools for accounting for this variability. If we had the proper crystal ball that could provide the correct settings for the dials reflecting the true nature of the relationship between each of the independent variables and sales, then we can account for the uncertainty in predicted demand in our valuation of an initial allocation in the following way: suppose we have a set of initial allocations $\left(\alpha^1_{10},\alpha^1_{20}\right), \left(\alpha^2_{10},\alpha^2_{20}\right),\dots, \left(\alpha^A_{10},\alpha^A_{20}\right)$ from which we want to choose the allocation with the highest value $\nu$. In a large sample from the distribution of sales, for each number output, we can calculate an associated value for each initial allocation. For each initial allocation we consider, this effectively converts the distribution of sales to a distribution of allocation value. To assign a single monetary value to each allocation, we simply take the mean of this distribution. An algorithm for this sequence of calculation may be written as follows:
+Let's imagine that we know exactly where the dials should be set; we know the true values of the _model parameters_.  We still don't know the optimal allocation since there is uncertainty in true demand and in where that demand will come from, so we can't calculate the value of any single allocation.  To get around this problem, use the following procedure:
 
-\begin{enumerate}
-\item n <- 0
-\item Press the magic button to obtain predicted demand in Region 1 and Region 2, $y_1^*$ and $y_2^*$.
-\item Given $y_1^*$ and $y_2^*$, calculate 
-$\nu_a^{\left(n \right)} = \nu\left(\alpha^a_{10},\alpha^a_{20},y_1^*,y_2^* \right)$ 
-for each allocation in the set $\left(\alpha^a_{10},\alpha^a_{20}\right)$, $a=1,\dots, A$.
-\item n <- n + 1
-\item if n = N, stop
-\end{enumerate}
+1. Pick an allocation (\emph{e.g.}, all units sent to fulfillment center 1)
+2. Generate a bunch of potential outcomes by pushing the magic button, say, 1000 times
+3. Calculate the value of the allocation under each of those potential outcomes
+4. Average those calculated values.
 
-By averaging over the $N$ samples, we assign allocation $a$ value
-\[
-\bar{\nu}_a = \frac{1}{N}\sum_{n=1}^N \nu_a^{\left(n\right)}.
-\]
+We can do this for lots of different allocations and see which one returns the highest average value.  Generating a sample of allocation values in this way is known as _Monte Carlo simulation_, and it allows us to account for the variability in sales leftover after accounting for the predictor variables. 
 
-
-
-Generating a sample of allocation values in this way is known as _Monte Carlo simulation_, and it allows us to account for the variability in sales leftover after accounting for the predictor variables. This is not, however, the only variability that we need to consider. Like the future demand, in practice, model parameters are unknown, so we don't actually know exactly where to set the dials on the black box before outputting the sample of futures sales. The simplest remedy for this is to estimate the model parameters using past information. 
-
+At this point, we've accounted for uncertainty in the demand when we know where the dials (\emph{i.e.}, parameter values) should be set.  Now, we need to account for our uncertainty about the model itself (\emph{i.e.}, our uncertainty about parameter values).
 
 ```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE,fig.width = 3,fig.height=3,fig.align="center"}
 library(lubridate)
@@ -186,7 +116,8 @@ library(magrittr)
 
 coffee_sales <- data.frame(weekly_high=seq(10,100,by=0.5),
                            expected_units_sold=10 + 6*seq(10,100,by=0.5)) %>%
-  transform(.,units_sold=rpois(n=length(seq(10,100,by=0.5)), expected_units_sold))
+  transform(.,units_sold=rnbinom(n=length(seq(10,100,by=0.5)), mu = expected_units_sold,
+                                 size = 50))
 coffee_sales$units_sold[coffee_sales$weekly_high==95]<- coffee_sales$expected_units_sold[coffee_sales$weekly_high==95] +90
 coffee_sales$units_sold[coffee_sales$weekly_high==75]<- coffee_sales$expected_units_sold[coffee_sales$weekly_high==75] +70
 ggplot(data=coffee_sales,aes(x=weekly_high,y=units_sold)) +
@@ -199,8 +130,7 @@ ggplot(data=coffee_sales,aes(x=weekly_high,y=units_sold)) +
 
 ```
 
-
-For example, suppose a coffee retailer has records weekly weather and the number of iced coffee units sold per week. Figure ~ displays the relationship between historical weekly sales and the weekly average high temperature. By fitting a statistical model to the historical data, we can infer where to place the dial controlling the parameter for weekly high temperature before using the box to output a sample from the future distribution of coffee sales. 
+As an example, suppose a coffee retailer has records of weekly weather and the number of iced coffee units sold per week. Figure X displays the relationship between historical weekly sales and the weekly average high temperature. By fitting a statistical model to the historical data, we can infer how to set the dial controlling the relationship between weekly high temperature and sales. 
 
 ```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE, fig.width = 8,fig.height=3,fig.align="center"}
 library(lubridate)
@@ -254,24 +184,13 @@ ggplot(data=coffee_sales,
 ```
 [TODO : Insert muted melon dials set to appropriate parameter value below each facet block, cut off the facet labels]
 
+Figure X shows how adjusting the dial changes our description of the relationship between sales and temperature.  Some curves appear to be more supported by the data than others. The curves in the middle panel fit the historical data very well, so it is very likely that those settings of the dial are right. The setting generating the line on the left is very unlikely, and the setting generating the line on the right is unlikely but plausible.
 
-
-```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE, out.width="490px",out.height="290px",fig.align="center"}
-knitr::include_graphics("img/black-box-dial-tune.png")
-```
-
-Figure~ shows how adjusting the parameter values changes the form of the relationship between sales and temperature. Some curves (and hence their corresponding parameter values) appear to be more supported by the data than others. The green curve fits the historical data very well, so it is very likely that those parameter values are close to the parameters that were used to generate the data. If we were to set the dials to these values and output several samples of sales, to which we could compare the historical data and reasonably conclude that each of the curves were produced by the same machine. The blue curve does not fit the data quite as well, but it still appears to approximate the relationship between sales and temperature reasonably well, so it is somewhat likely that those parameter values could be the correct ones. The red curve is the least satisfactory fit to the historical data. For each of the blue and green curves, we could repeat the same investigation as with the green curve. For each group of samples, how likely is it that the historical data and the new samples came from the same machine?    
-
-[TODO: add picture here to show how to use the posterior weights to construct my sample from $\pi\left(Y^* \vert Y,X,X^*\right)$. ]
-
-We could produce many more curves that fit the data well and represent reasonable candidate parameter settings, so how do I choose just one specification of the dials to obtain a sample of sales? Rather than select just one configuration of the dials and obtaining our sample from one setting of the machine, we can account for our uncertainty in the parameter settings by constructing our sample from a mixture of the outputs from each setting. But rather than giving  each dial configuration the same weight in the mixture, we give larger weight to machines with parameters that are more likely to have produced the historical data. Output obtained from the machine with dials set to the parameters of the green curve would have high weight, while output from the machine with the blue configuration would have slightly less weight. Though not likely, it's still possible that the output from the machine set to the red parameter values could have produced the historical data, so we allow that output to contribute to the sample, but place lower weight on these samples. Sampling future sales so that we consider each parameter value in proportion to how likely is it that that value is the correct one - given the historical data is the cornerstone of Bayesian forecasting. By taking into consideration every ``what-if'' case, we can account for prediction uncertainty that standard statistical approaches cannot.
-
+We could produce many more lines that fit the data with different levels of plausibility, so how do I choose just one specification of the dials to obtain a sample of demand values? Bayesian methods give us a natural way to do this. Fitting a Bayesian model provides us with information on how plausible each setting of the dial is. Instead of selecting just one setting of the dial, we can account for our uncertainty by trying lots of different settings, with the more plausible ones getting more weight.  This idea is the cornerstone of Bayesian forecasting - we sample future sales setting the dial to differrent values in proportion to how likely that setting is the correct one.  By taking into consideration every ``what-if'' case, we can account for prediction uncertainty that standard statistical approaches cannot.
 
 ```{r,echo=FALSE, fig.align="center",out.width = "290px",out.height="290px"}
 knitr::include_graphics("img/ggmap-hh-fc-locations.png")
 ```
-
-
 
 \section{After}
 
