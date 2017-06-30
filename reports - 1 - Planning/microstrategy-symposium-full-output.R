@@ -224,14 +224,14 @@ ggplot(curve_frame) +
 n_samples <- 10000
 posterior_samples <- NULL
 for (j in 1:n_regions) {
-  alpha_1 <- theta_1_means[j]^2 / theta_1_variances[j]
-  beta_1 <- theta_1_means[j] / theta_1_variances[j]
-  alpha_2 <- theta_2_means[j]^2 / theta_2_variances[j]
-  beta_2 <- theta_2_means[j] / theta_2_variances[j]
+  gamma_1 <- theta_1_means[j]^2 / theta_1_variances[j]
+  delta_1 <- theta_1_means[j] / theta_1_variances[j]
+  gamma_2 <- theta_2_means[j]^2 / theta_2_variances[j]
+  delta_2 <- theta_2_means[j] / theta_2_variances[j]
   posterior_samples <- rbind(posterior_samples,
                              data.frame(region = rep(j, n_samples),
-                                        theta_1 = rgamma(n_samples, alpha_1, beta_1),
-                                        theta_2 = rgamma(n_samples, alpha_2, beta_2)))
+                                        theta_1 = rgamma(n_samples, gamma_1, delta_1),
+                                        theta_2 = rgamma(n_samples, gamma_2, delta_2)))
 }
 
 #Determine the buy. Set it at 90% of the predicted sales
@@ -297,7 +297,7 @@ initial_allocation <- round(total_buy * fc_expected_fulfillment$expected_sales /
 
 #Set up cost parameters
 alpha_1 <- 5 #fixed cost of delivering a unit
-alpha_2 <- 0.05 #variable cost of delivering a unit 1 distance unit ($50 per 1000 mi)
+alpha_2 <- 0.02 #variable cost of delivering a unit 1 distance unit ($20 per 1000 mi)
 alpha_3 <- 10 #variable cost of delivering a unit 1 time unit
 miles_per_day <- 500 #1 time unit increase in delivery for this many miles travelled
 AUR <- 29.99 #Item sale price
@@ -479,7 +479,7 @@ n_generations_opt <- 2 #This must be less than or equal to n_samples
 set.seed(1978)
 #Set up cost parameters
 alpha_1 <- 5 #fixed cost of delivering a unit
-alpha_2 <- 0.05 #variable cost of delivering a unit 1 distance unit ($50 per 1000 mi)
+alpha_2 <- 0.02 #variable cost of delivering a unit 1 distance unit ($20 per 1000 mi)
 alpha_3 <- 10 #variable cost of delivering a unit 1 time unit
 miles_per_day <- 500 #1 time unit increase in delivery for this many miles travelled
 AUR <- 29.99 #Item sale price
@@ -698,6 +698,8 @@ save.image(file.path("data",
                      paste0("microstrategy-run-",
                      gsub(" ","-",gsub(":","-",Sys.time())),".RData")))
 
+load("data/microstrategy-run-2017-06-29-11-38-52.RData")
+
 allocation_frame <- as.data.frame(allocations)
 allocation_frame$allocation_number <- 1:nrow(allocation_frame)
 output_storage <- merge(output_storage, allocation_frame)
@@ -769,37 +771,15 @@ theta_1_means_orig <- theta_1_means
 theta_1_means[1] <- theta_1_means[1] * 0.413
 #FL and SC are in region 1 and account for 
 for (j in 1:n_regions) {
-  alpha_1 <- theta_1_means[j]^2 / theta_1_variances[j]
-  beta_1 <- theta_1_means[j] / theta_1_variances[j]
-  alpha_2 <- theta_2_means[j]^2 / theta_2_variances[j]
-  beta_2 <- theta_2_means[j] / theta_2_variances[j]
+  gamma_1 <- theta_1_means[j]^2 / theta_1_variances[j]
+  delta_1 <- theta_1_means[j] / theta_1_variances[j]
+  gamma_2 <- theta_2_means[j]^2 / theta_2_variances[j]
+  delta_2 <- theta_2_means[j] / theta_2_variances[j]
   posterior_samples <- rbind(posterior_samples,
                              data.frame(region = rep(j, n_samples),
-                                        theta_1 = rgamma(n_samples, alpha_1, beta_1),
-                                        theta_2 = rgamma(n_samples, alpha_2, beta_2)))
+                                        theta_1 = rgamma(n_samples, gamma_1, delta_1),
+                                        theta_2 = rgamma(n_samples, gamma_2, delta_2)))
 }
-
-#Make a matrix of the allocation schemes to try
-allocations <- matrix(initial_allocation, nrow = 1)
-allocation_list <- vector("list", n_fulfill_centers - 1)
-for (j in 1:(n_fulfill_centers - 1)) {
-  allocation_list[[j]] <- round(initial_allocation[j], -2)
-  allocation_list[[j]] <- seq(max(allocation_list[[j]] - 200, 100),
-                              min(allocation_list[[j]] + 200, 100 * floor(total_buy / 100)),
-                              by = 100)
-}
-# #Override manually since this didn't find the max
-# allocation_list[[1]] <- seq(300, 700, by = 100)
-# allocation_list[[2]] <- seq(500, 900, by = 100)
-# allocation_list[[3]] <- seq(400, 800, by = 100)
-# allocation_list[[4]] <- seq(400, 800, by = 100)
-other_allocations <- as.matrix(expand.grid(allocation_list))
-other_allocations <- cbind(other_allocations,
-                           total_buy - apply(other_allocations, 1, sum))
-allocations <- rbind(allocations, other_allocations)
-
-#Remove invalid allocations
-allocations <- allocations[allocations[, ncol(allocations)] >= 0, ]
 
 options(warn = 2)
 output_storage <- NULL
@@ -851,7 +831,7 @@ for (this_allocation in 1:nrow(allocations)) {
       order_hhs <- sample(which(household_locations$region == 1 &
                                   !(household_locations$state %in% 
                                       c("Florida", "South Carolina"))),
-                          true_buys[j, time_point], replace = FALSE)
+                          true_buys[1, time_point], replace = FALSE)
       for (j in 2:n_regions) {
         order_hhs <- c(order_hhs, sample(which(household_locations$region == j),
                                          true_buys[j, time_point], replace = FALSE))
@@ -1062,37 +1042,15 @@ buy_ratio <- rep(1, nrow(household_locations))
 buy_ratio[household_locations$state %in% red_states] <- 2.33
 
 for (j in 1:n_regions) {
-  alpha_1 <- theta_1_means[j]^2 / theta_1_variances[j]
-  beta_1 <- theta_1_means[j] / theta_1_variances[j]
-  alpha_2 <- theta_2_means[j]^2 / theta_2_variances[j]
-  beta_2 <- theta_2_means[j] / theta_2_variances[j]
+  gamma_1 <- theta_1_means[j]^2 / theta_1_variances[j]
+  delta_1 <- theta_1_means[j] / theta_1_variances[j]
+  gamma_2 <- theta_2_means[j]^2 / theta_2_variances[j]
+  delta_2 <- theta_2_means[j] / theta_2_variances[j]
   posterior_samples <- rbind(posterior_samples,
                              data.frame(region = rep(j, n_samples),
-                                        theta_1 = rgamma(n_samples, alpha_1, beta_1),
-                                        theta_2 = rgamma(n_samples, alpha_2, beta_2)))
+                                        theta_1 = rgamma(n_samples, gamma_1, delta_1),
+                                        theta_2 = rgamma(n_samples, gamma_2, delta_2)))
 }
-
-#Make a matrix of the allocation schemes to try
-allocations <- matrix(initial_allocation, nrow = 1)
-allocation_list <- vector("list", n_fulfill_centers - 1)
-for (j in 1:(n_fulfill_centers - 1)) {
-  allocation_list[[j]] <- round(initial_allocation[j], -2)
-  allocation_list[[j]] <- seq(max(allocation_list[[j]] - 200, 100),
-                              min(allocation_list[[j]] + 200, 100 * floor(total_buy / 100)),
-                              by = 100)
-}
-# #Override manually since this didn't find the max
-# allocation_list[[1]] <- seq(300, 700, by = 100)
-# allocation_list[[2]] <- seq(500, 900, by = 100)
-# allocation_list[[3]] <- seq(400, 800, by = 100)
-# allocation_list[[4]] <- seq(400, 800, by = 100)
-other_allocations <- as.matrix(expand.grid(allocation_list))
-other_allocations <- cbind(other_allocations,
-                           total_buy - apply(other_allocations, 1, sum))
-allocations <- rbind(allocations, other_allocations)
-
-#Remove invalid allocations
-allocations <- allocations[allocations[, ncol(allocations)] >= 0, ]
 
 options(warn = 2)
 output_storage <- NULL
