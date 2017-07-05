@@ -17,19 +17,19 @@ While the first of these costs can be associated with a particular dollar value,
 
 In this research brief, we describe a method to determine the best allocation of inventory to fulfillment centers after a total buy has been determined.
 
-\section{ [Typical Solutions]: How they work}
+\section{ Typical Solutions: How they work}
 
 There are several products on the market for supply chain optimization. Many of those products are outfitted with the functionality for determining efficient allocation of inventory to distribution centers. These products usually perform two tasks: (1) predicting future demand and (2) developing a plan to purchase and distribute products to meet demand as efficiently as possible.
 
 Demand predictions are made by developing statistical models based on past demand values. Often, these forecasts are done using data that has been aggregated to a fairly high level, such as by week, subpopulation of customers, or category of merchandise. After demand has been estimated, an actual buy (total inventory) is determined by adding safety stock to the estimate. Determining how this inventory is distributed is then done deterministically; the center that will fulfill each online order is determined using a set of rules which specify the logic necessary for minimizing cost.
 
-\section{ [Typical Solutions]: Why they suck} 
+\section{ Typical Solutions: Why they're problematic} 
 
 Despite the numerous existing applications offering solutions to the allocation problem, inventory allocation inefficiencies are still quite prevelant across retail supply chains. The key weakness in these solutions is that they don't account for uncertainty in the demand forecast correctly due to overly rigid assumptions.  For example, it is commonly assumed that safety stock should be proportional to the standard deviation of the demand. It is also common in the existing market for software solutions to assume that the demand at a given fulfillment center is independent from week to week, i.e. that the demand in the current week contains no useful information for predicting demand for the week to follow. Both of these assumptions are invalidated by the classic example of the trendsetter - she purchases an item and after wearing it demand increases dramatically as the crowd follows her.
 
 Even when all the assumptions of a forecasting model are reasonable, there is uncertainty in demand.  This uncertainty comes from two sources: random variation in demand and uncertainty about the model we use to make predictions. Most existing inventory allocation tools determine the best allocation of inventory assuming that this prediction error doesn't exist. This failure to account for the uncertainty can lead to suboptimal allocation of inventory, leading to loss incurred due to fulfillment centers with overstock or inability to fulfill customer orders where the demanded exceed projections.
 
-\section{[Solution]: Skinny in 6 weeks!}
+\section{ Our Solution }
 
 Optimizing inventory allocation is not a new concern for retailers, so it's interesting that there is so little variety in available solutions.  Futhermore, most of the existing products providing solutions to these problems aren't leveraging Bayesian methods.  Bayesian methods are a set of statistical techniques that naturally account for all of the uncertainty in a forecast, so they are a natural fit for the problem at hand.
 
@@ -192,6 +192,23 @@ We could produce many more lines that fit the data with different levels of plau
 knitr::include_graphics("img/ggmap-hh-fc-locations.png")
 ```
 
-\section{After}
+\section{ Results }
 
-* Output -> Outcome -> minimize loss -> increase ROI 
+The final strategy for finding an optimal allocation works this way:
+
+1. Pick an allocation (\emph{e.g.}, all units sent to fulfillment center 1)
+2. Pick a setting of the dials (\emph{i.e.}, parameter values) in proportion to how supported those settings are by the historical data
+3. Generate a bunch of potential outcomes by pushing the magic button, say, 1000 times
+4. Calculate the value of the allocation under each of those potential outcomes
+5. Average those calculated values
+6. Select the outcome with the greatest average value - this is the optimal allocation.
+
+In addition to providing information about the optimal allocation, we obtain information about how much worse alternative allocations are relative to the optimal allocation.  For example, if the optimal allocation to two fulfillment centers is 500 units in each but one of the centers only has space for 400 units, we could find out how much money we expect to lose as a result of a 400/600 unit allocation relative to the optimal allocation.
+
+This strategy is also flexible enough to accommodate changes in delivery strategies since Step 4 doesn't require any particular form of the function relating demand to value.  As an example, we might decide to change the default fulfillment center for a particular geography, say, changing Texas' primary fulfillment center to be number 1 instead of number 2.  The algorithm is able to accommodate these sorts of changes.
+
+Overall, the Bayesian strategy we have described is a much more reasonable approach than current software solutions provide, allowing retailers to minimize the cost of product delivery.
+
+
+
+
