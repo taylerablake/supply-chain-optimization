@@ -1,5 +1,7 @@
 #Generate output for the Microstrategy implementation of the algorithm.  Generate
 #raw data from three different scenarios and fit the model to those data.
+#This *-zip.R version of the code creates households at the zip code level, which
+#makes a more reasonable population map than the county-level data.
 
 #This code generates three datasets:
 #1. Demand: state * scenario - Expected demand in each state.  Uses
@@ -170,6 +172,59 @@ ggmap(us_gg_map) +
 ggsave("reports - 1 - Planning/microstrategy-symposium-images/fc-locations.png",
        height = 5.5, width = 9.17)
 
+#Find the closest fulfillment center to each household
+fc_to_hh_distances <- matrix(NA, nrow(fulfill_centers_locations),
+                             nrow(household_locations))
+for (i in 1:nrow(fulfill_centers_locations)) {
+  fc_to_hh_distances[i, ] <- haversine_distance(fulfill_centers_locations$y[i],
+                                               fulfill_centers_locations$x[i],
+                                               household_locations$y,
+                                               household_locations$x)
+}
+fc_to_hh_distance <- apply(fc_to_hh_distances, 2, which.min)
+
+alpha_shapes <- vector("list", n_fulfill_centers)
+for (i in 1:n_fulfill_centers) {
+  alpha_shapes[[i]] <- ahull(household_locations$x[fc_to_hh_distance == i],
+                             household_locations$y[fc_to_hh_distance == i],
+                             .8)
+}
+alpha_polys <- NULL
+for (i in 1:n_fulfill_centers)
+  alpha_polys <- rbind(alpha_polys,
+                       data.frame(fc = i,
+                                  data.frame(alpha_shapes[[i]]$arcs)[, c("c1", "c2")]))
+alpha_polys$fc <- as.factor(alpha_polys$fc)
+
+ggmap(us_gg_map) +
+  geom_polygon(data = alpha_polys,
+               aes(x = c1, y = c2, fill = fc),
+               alpha = .5) +
+  geom_point(data = fulfill_centers_locations,
+             aes(x = x, y = y), color = '#FFFFFF',
+             size = 5) +
+  geom_text(data = fulfill_centers_locations, 
+            aes(x = x, y = y, label = fc), color = "#000000",
+            size = 2) +
+  scale_color_manual(values = c("#2591E9",
+                                "#F69E1A",
+                                "#1AB17E",
+                                "#E74C48",
+                                "#EE6922",
+                                "#D75D9C",
+                                "#7959B9",
+                                "#7E7E7E")) +
+  guides(color = FALSE)
+ggsave("reports - 1 - Planning/microstrategy-symposium-images/fc-allocations.png",
+       height = 5.5, width = 9.17)
+
+
+fc_to_region_distances[i, j] <- haversine_distance(fulfill_centers_locations$y[i],
+                                                   fulfill_centers_locations$x[i],
+                                                   mean(household_locations$y[household_locations$region == j]),
+                                                   mean(household_locations$x[household_locations$region == j]))
+
+
 #Define the posterior distribution of actual orders in different regions.
 #Data distribution
 #Y_{kt} ~ Poi(\mu_{kt})
@@ -180,7 +235,6 @@ theta_1_means <- rnorm(n_regions, 10, 2)
 theta_1_variances <- rgamma(n_regions, 1, 1)
 theta_2_means <- rgamma(n_regions, 3 * n_time_periods / 3, 3)
 theta_2_variances <- rgamma(n_regions, 5 * n_time_periods / 6, 5)
-
 
 data.frame( expand.grid(t=1:n_time_periods,region=factor(1:8)),
             demand_mean=sapply(1:n_regions,
@@ -222,6 +276,30 @@ ggplot(curve_frame) +
   geom_line() +
   facet_wrap(~ region) + theme_minimal()
 
+#Graph demand for just a couple of regions
+region_graph <- ddply(curve_frame %>% filter(region %in% c(1, 6)),
+                      .(region, x),
+                      summarize, y = mean(y))
+p <- ggplot(region_graph %>% filter(region == 1)) +
+  aes(x = x, y = y) +
+  geom_line() +
+  scale_x_continuous("Days after Introduction") +
+  scale_y_continuous("Units Sold", limits = c(5.12729511034423, 596.946340116041)) +
+  ggtitle("Cumulative Demand")
+aap_format(p, color_scheme = "blue", display_metadata = FALSE)
+ggsave("reports - 1 - Planning/microstrategy-symposium-images/cumulative-demand-southeast.png",
+       height = 8.5, width = 11)
+
+p <- ggplot(region_graph %>% filter(region == 6)) +
+  aes(x = x, y = y) +
+  geom_line() +
+  scale_x_continuous("Days after Introduction") +
+  scale_y_continuous("Units Sold", limits = c(5.12729511034423, 596.946340116041)) +
+  ggtitle("Cumulative Demand")
+aap_format(p, color_scheme = "blue", display_metadata = FALSE)
+ggsave("reports - 1 - Planning/microstrategy-symposium-images/cumulative-demand-plains.png",
+       height = 8.5, width = 11)
+
 #Get 95% intervals for the posterior on the curves
 curve_frame <- NULL
 x <- 1:n_time_periods
@@ -237,7 +315,8 @@ for (i in 1:100) {
     curve_frame <- rbind(curve_frame,
                          data.frame(region = rep(j, length(x)),
                                     x = x,
-                                    y = cumsum(y)))
+                                    y = cumsum(y),
+                                    curve_number = rep(i, length(x))))
   }
 }
 # curve_frame <- ddply(curve_frame, .(region, x),
@@ -266,6 +345,67 @@ ggplot(curve_frame) +
   theme_minimal() +
   scale_x_continuous("Time") +
   scale_y_continuous("Cumulative Demand (units)")
+
+#Graph cumulative demand with uncertainty
+curve_frame_graph <- curve_frame %>% filter(region == 1)
+p <- ggplot(curve_frame_graph) +
+  geom_line(aes(x = x, y = y, group = curve_number),
+             alpha=0.12,
+             size=1.2) +
+  geom_line(data=curve_frame_graph[!duplicated(curve_frame_graph[,c("x")]),],
+            aes(x=x,y=l95),
+            color = "#399FDA", size = 2) +
+  geom_line(data=curve_frame_graph[!duplicated(curve_frame_graph[,c("x")]),],
+            aes(x=x,y=u95),
+            color = "#399FDA", size = 2) +
+  scale_x_continuous("Days after Introduction") +
+  scale_y_continuous("Units Sold", limits = range(curve_frame$y)) +
+  ggtitle("Cumulative Demand")
+aap_format(p, color_scheme = "blue", display_metadata = FALSE)
+ggsave("reports - 1 - Planning/microstrategy-symposium-images/cumulative-demand-southeast-w-uncertainty.png",
+       height = 8.5, width = 11)
+
+curve_frame_graph <- curve_frame %>% filter(region == 6)
+p <- ggplot(curve_frame_graph) +
+  geom_line(aes(x = x, y = y, group = curve_number),
+            alpha=0.12,
+            size=1.2) +
+  geom_line(data=curve_frame_graph[!duplicated(curve_frame_graph[,c("x")]),],
+            aes(x=x,y=l95),
+            color = "#399FDA", size = 2) +
+  geom_line(data=curve_frame_graph[!duplicated(curve_frame_graph[,c("x")]),],
+            aes(x=x,y=u95),
+            color = "#399FDA", size = 2) +
+  scale_x_continuous("Days after Introduction") +
+  scale_y_continuous("Units Sold", limits = range(curve_frame$y)) +
+  ggtitle("Cumulative Demand")
+aap_format(p, color_scheme = "blue", display_metadata = FALSE)
+ggsave("reports - 1 - Planning/microstrategy-symposium-images/cumulative-demand-great-plains-w-uncertainty.png",
+       height = 8.5, width = 11)
+
+#Make similar graphs with only a single curve
+curve_frame$region_fac <- as.factor(curve_frame$region)
+for (i in 1:4) {
+  p <- ggplot(curve_frame %>% filter(curve_number == 1 & region <= 4)) +
+    geom_line(aes(x = x, y = y, group = region_fac, color = region_fac),
+              size = 1.2) +
+    scale_x_continuous("Days after Introduction") +
+    scale_y_continuous("Units Sold", limits = range(curve_frame$y)) +
+    ggtitle("Cumulative Demand")
+  aap_format(p, color_scheme = "blue", display_metadata = FALSE) +
+    scale_color_manual(values = c("#2591E9",
+                                  "#F69E1A",
+                                  "#1AB17E",
+                                  "#E74C48",
+                                  "#EE6922",
+                                  "#D75D9C",
+                                  "#7959B9",
+                                  "#7E7E7E")) +
+    guides(color = FALSE)
+  ggsave(paste0("reports - 1 - Planning/microstrategy-symposium-images/button-output-", i, ".png"),
+         height = 8.5, width = 11)
+}
+
 
 #Generate a large number of samples from the posterior distributions
 n_samples <- 10000
@@ -350,6 +490,21 @@ miles_per_day <- 500 #1 time unit increase in delivery for this many miles trave
 AUR <- 39.99 #Item sale price
 delta <- 0.00069 #Discount factor per additional unit over demand (markdown rate)
 #0.00069 implies that AUR is cut in half for an over-order of 1000 units
+
+#Make a graph showing cost of fulfillment for different distances/times
+delivery_graph <- data.frame(deliver_distances = seq(0, 1200, len = 100))
+delivery_graph$delivery_cost <- alpha_1 + alpha_2 * delivery_graph$deliver_distances +
+                       alpha_3 * floor(as.numeric(delivery_graph$deliver_distances) / miles_per_day)
+p <- ggplot(delivery_graph) +
+  aes(x = deliver_distances, y = delivery_cost) +
+  geom_line(size = 2) +
+  ggtitle("Delivery Cost by Delivery Distance") +
+  scale_x_continuous("Delivery Distance (miles)") +
+  scale_y_continuous("Delivery Cost", label = dollar,
+                     limits = c(0, max(delivery_graph$delivery_cost)))
+aap_format(p, color_scheme = "blue", display_metadata = FALSE)
+ggsave("reports - 1 - Planning/microstrategy-symposium-images/cost-function.png",
+       height = 8.5, width = 11)
 
 #Simulate the system
 options(warn = 2)
