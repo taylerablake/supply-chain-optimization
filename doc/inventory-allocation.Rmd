@@ -109,7 +109,7 @@ We can do this for lots of different allocations and see which one returns the h
 
 At this point, we've accounted for uncertainty in the demand when we know where the dials (\emph{i.e.}, parameter values) should be set.  Now, we need to account for our uncertainty about the model itself (\emph{i.e.}, our uncertainty about parameter values).
 
-```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE,fig.width = 3,fig.height=3,fig.align="center"}
+```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE,fig.width = 3,fig.height=3,fig.align="center", fig.cap = "Scatterplot of units sold vs. high temperature"}
 library(lubridate)
 library(ggplot2)
 library(magrittr)
@@ -130,9 +130,9 @@ ggplot(data=coffee_sales,aes(x=weekly_high,y=units_sold)) +
 
 ```
 
-As an example, suppose a coffee retailer has records of weekly weather and the number of iced coffee units sold per week. Figure X displays the relationship between historical weekly sales and the weekly average high temperature. By fitting a statistical model to the historical data, we can infer how to set the dial controlling the relationship between weekly high temperature and sales. 
+As an example, suppose a coffee retailer has records of weekly weather and the number of iced coffee units sold per week. Figure 3 displays the relationship between historical weekly sales and the weekly average high temperature. By fitting a statistical model to the historical data, we can infer how to set the dial controlling the relationship between weekly high temperature and sales. 
 
-```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE, fig.width = 8,fig.height=3,fig.align="center"}
+```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE, fig.width = 8,fig.height=3,fig.align="center", fig.cap = "Several hypothetial 'true' relationships between temperature and coffee sales."}
 library(lubridate)
 library(ggplot2)
 library(ggthemes)
@@ -184,13 +184,9 @@ ggplot(data=coffee_sales,
 ```
 [TODO : Insert muted melon dials set to appropriate parameter value below each facet block, cut off the facet labels]
 
-Figure X shows how adjusting the dial changes our description of the relationship between sales and temperature.  Some curves appear to be more supported by the data than others. The curves in the middle panel fit the historical data very well, so it is very likely that those settings of the dial are right. The setting generating the line on the left is very unlikely, and the setting generating the line on the right is unlikely but plausible.
+Figure 4 shows how adjusting the dial changes our description of the relationship between sales and temperature.  Some curves appear to be more supported by the data than others. The curves in the middle panel fit the historical data very well, so it is very likely that those settings of the dial are right. The setting generating the line on the left is very unlikely, and the setting generating the line on the right is unlikely but plausible.
 
 We could produce many more lines that fit the data with different levels of plausibility, so how do I choose just one specification of the dials to obtain a sample of demand values? Bayesian methods give us a natural way to do this. Fitting a Bayesian model provides us with information on how plausible each setting of the dial is. Instead of selecting just one setting of the dial, we can account for our uncertainty by trying lots of different settings, with the more plausible ones getting more weight.  This idea is the cornerstone of Bayesian forecasting - we sample future sales setting the dial to differrent values in proportion to how likely that setting is the correct one.  By taking into consideration every ``what-if'' case, we can account for prediction uncertainty that standard statistical approaches cannot.
-
-```{r,echo=FALSE, fig.align="center",out.width = "290px",out.height="290px"}
-knitr::include_graphics("img/ggmap-hh-fc-locations.png")
-```
 
 \section{ Results }
 
