@@ -45,8 +45,9 @@ ggplot() +
         ,axis.ticks = element_blank()
         ,text = element_text(color = "#A1A1A1")
         ,plot.title = element_text(size = 20)) +
-  guides(colour=guide_legend("Region",override.aes = list(alpha = 1,size=2))) +
-  scale_color_tableau()
+  #guides(colour=guide_legend("Region",override.aes = list(alpha = 1,size=2))) +
+  guides(colour="none") +
+  scale_color_tableau() 
   ggsave(file.path(getwd(),"doc", "img", "toy-example-map.png"))
 
   cache("toy_HH_samples")
