@@ -1,6 +1,3 @@
-library(ProjectTemplate)
-load.project()
-
 set.seed(1977)
 
 #Set a time range
@@ -133,10 +130,6 @@ fc_expected_fulfillment <- ddply(data.frame(fc = fc_region_assignments,
 ####################################################################################################
 ####################################################################################################
 
-library(doParallel)
-library(foreach)
-library(parallel)
-
 cl <- makePSOCKcluster(detectCores()-2)
 registerDoParallel(cl)
 
@@ -165,15 +158,13 @@ allocation_list[[3]] <- seq(300, 600, length.out = 4)
 allocation_list[[4]] <- seq(600, 800, length.out = 4)
 
 other_allocations <- as.matrix(expand.grid(allocation_list))
+other_allocations <- apply(other_allocations, MARGIN=c(1,2),FUN=floor)
 other_allocations <- cbind(other_allocations,
                            total_buy - apply(other_allocations, 1, sum))
 allocations <- rbind(allocations, other_allocations)
 
 
 options(warn = 2)
-t1 <- Sys.time()
-
-
 clusterExport(cl,c("allocations",
               "alpha_1",
               "alpha_2",
@@ -182,11 +173,14 @@ clusterExport(cl,c("allocations",
               "delta",
               "HH_samples",
               "fulfill_centers_locations"))
-output_storage_list <- foreach(a=iter(allocations, by='row')) %dopar% {
+t1 <- Sys.time()
+print(t1)
+output_storage_list <- foreach(a=iter(allocations, by='row'),
+                               .errorhandling='remove') %dopar% {
   
   output_storage <- NULL
   initial_allocation <- as.numeric(a)
-  allocation_number <- which(duplicated(data.frame(rbind(initial_allocation,allocations)))) 
+  allocation_number <- which(duplicated(data.frame(rbind(initial_allocation,allocations)))) -1
   n_generations <- 100 #This must be less than or equal to n_samples
   value_storage <- data.frame(total_value = rep(NA, n_generations),
                               amt_sold = rep(NA, n_generations),
@@ -347,8 +341,12 @@ output_storage_list <- foreach(a=iter(allocations, by='row')) %dopar% {
   output_storage <- rbind(output_storage, value_storage)
   output_storage
 }
+t2 <- Sys.time()
+print(t2-t1)
+cache("output_storage_list")
 
 
+t1 <- Sys.time()
 naive_output_storage_list <- foreach(a=iter(allocations, by='row')) %dopar% {
   
   output_storage <- NULL
@@ -514,6 +512,9 @@ naive_output_storage_list <- foreach(a=iter(allocations, by='row')) %dopar% {
   output_storage <- rbind(output_storage, value_storage)
   output_storage
 }
+t2 <- Sys.time()
+print(t2-t1)
+cache("naive_output_storage_list")
 
 
 
@@ -522,11 +523,13 @@ naive_output_storage_list <- foreach(a=iter(allocations, by='row')) %dopar% {
 
 allocation_frame <- as.data.frame(allocations)
 allocation_frame$allocation_number <- 1:nrow(allocation_frame)
-output_storage <- merge(output_storage, allocation_frame)
-stupid_output_storage <- merge(stupid_output_storage, allocation_frame)
+output_storage <- merge(ldply(output_storage_list,data.frame),
+                        allocation_frame)
+naive_output_storage <- merge(ldply(naive_output_storage_list,data.frame),
+                               allocation_frame)
 
 
-save.image(file=file=file.path(getwd(),
+save.image(file=file.path(getwd(),
                                "data",
                                paste0("example-application-run-",
                                       str_replace_all(str_replace_all(Sys.time()," ","_"),":","-"),".Rdata")))
@@ -535,10 +538,20 @@ save.image(file=file=file.path(getwd(),
 
 avgs <- ddply(output_storage, .(Var1, Var2, Var3, Var4, V5),
                      summarize, ev = mean(total_value))
-stupid_avgs <- ddply(stupid_output_storage, .(Var1, Var2, Var3, Var4, V5),
+naive_avgs <- ddply(naive_output_storage, .(Var1, Var2, Var3, Var4, V5),
                      summarize, ev = mean(total_value))
 
-stupid_avgs[which.max(stupid_avgs$ev),]
+naive_avgs[which.max(naive_avgs$ev),]
+
 avgs[which.max(avgs$ev),]
+avgs[which.max(naive_avgs$ev),]
 
 
+expected <- rep(NA, n_regions)
+mean(posterior_samples$theta_1)
+for (j in 1:n_regions) {
+  this_index <- n_samples * (j - 1) + this_generation
+  expected_buys[j, ] <- posterior_samples$theta_1[this_index] * 
+    exp(-(1:n_time_periods) / posterior_samples$theta_2[this_index])
+  true_buys[j, ] <- rpois(n_time_periods, expected_buys[j, ])
+}

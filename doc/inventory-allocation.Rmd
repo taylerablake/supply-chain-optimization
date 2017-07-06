@@ -1,10 +1,4 @@
 ---
-title: "inv-allo"
-author: "Tayler Blake"
-date: "July 6, 2017"
-output: pdf_document
----
----
 title: "Optimization of Inventory Allocation"
 output:
   pdf_document:
@@ -20,6 +14,7 @@ In 2016, e-commerce sales totaled an estimated $394.9 billion, accounting for 8.
 + length of time required to fulfill orders to delivery addresses from fulfillment centers
 
 While the first of these costs can be associated with a particular dollar value, the cost related to the second consideration is driven by customer disatisfaction with delayed product arrivals and is more difficult to quantify. Additionally, there are a host of other factors to be considered when optimizing inventory allocation, including the cost of transferring units between fulfillment centers to respond to shifts in demand and the decision of whether to fulfill an order from a store instead of a fulfillment center.
+<<<<<<< HEAD
 
 In this research brief, we describe a method to determine the best allocation of inventory to fulfillment centers after a total buy has been determined.
 

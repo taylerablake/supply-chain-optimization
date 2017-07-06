@@ -109,6 +109,10 @@ ggplot() +
         ,plot.title = element_text(size = 34)
   ) 
 
+map <- get_map('United States',
+               zoom=4,
+               color="bw",
+               maptype='hybrid')
 ggmap(map,
       darken=0.2) +
   geom_point(data=HH_samples,

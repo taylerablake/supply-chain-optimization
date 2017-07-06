@@ -1,2 +1,6 @@
-example-application-run-20160822.RData
-example-application-run-20160825.RData
+*.RData
+*.csv
+cb_2016_us_zcta510_500k
+census/.DS_Store
+census/aff_download
+.DS_Store
