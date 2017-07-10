@@ -1,90 +1,129 @@
 
 source(file.path(getwd(),"lib","latlon2state.R"))
 
-pop_by_state <- read.csv(file.path(getwd(),
-                   "data",
-                   "census",
-                   "2016",
-                   "population_by_state.csv"),
-                   header = TRUE)
-names(pop_by_state)[names(pop_by_state)=="respop72016"] <- "total_pop_2016" 
-names(pop_by_state)[names(pop_by_state)=="GEO.display.label"] <- "STATE"
+#This code generates three datasets:
+#1. Demand: state * scenario - Expected demand in each state.  Uses
+# full state names.
+#2. Allocation: scenario * FC - All possible allocations and their attendant
+# values
+#3. Location: FC - latitude and longitude.
 
-pop_by_state <- subset(pop_by_state,!(STATE%in%c("American Samoa",
-                                                 "Guam",
-                                                 "Commonwealth of the Northern Mariana Islands",
-                                                 "Puerto Rico",
-                                                 "Hawaii",
-                                                 "Alaska")))
+library(ProjectTemplate)
+load.project()
 
-## calculate the proportion of the total national population living in each state
-pop_by_state <- transform(pop_by_state,
-                          prop_national_pop=total_pop_2016/sum(pop_by_state$total_pop_2016))
+set.seed(1977)
 
-## create a uniform grid over the rectangle bounding the lower 48 and label
-## each point with the corresponding state
+#Set a time range
+n_time_periods <- 100
 
-top <- 48.945
-bottom <- 25
-left <- -124
-right <- -68
+#Create all the households------------------
+zips <- readShapePoly("data/census/2016/cb_2016_us_zcta510_500k/cb_2016_us_zcta510_500k",
+                      proj4string = CRS("+proj=longlat +datum=WGS84"),
+                      IDvar = "GEOID10")
 
-grid_points <- expand.grid(lon=seq(left,right,length.out=3000),
-                           lat=seq(bottom,top,length.out=3000))
-STATE <- str_to_title(latlon2state(grid_points))
-grid_points <- grid_points[!is.na(STATE),]
-grid_points <- transform(grid_points,
-                         STATE=STATE[!is.na(STATE)])
-rm(STATE)
+#Subset to continental US
+us_range <- map("usa", plot = FALSE)$range
+x_range <- us_range[2] - us_range[1]
+y_range <- us_range[4] - us_range[3]
+us_range[1] <- us_range[1] - .05 * x_range
+us_range[2] <- us_range[2] + .05 * x_range
+us_range[3] <- us_range[3] - .05 * y_range
+us_range[4] <- us_range[4] + .05 * y_range
+temp <- zips
+to_null <- rep(FALSE, length(zips))
+for (i in 1:length(zips)) {
+  if (i %% 1000 == 0)
+    cat(i, "of", length(zips), "\n")
+  if (zips[i, ]@bbox[1, 1] < us_range[1] |
+      zips[i, ]@bbox[1, 2] > us_range[2] |
+      zips[i, ]@bbox[2, 1] < us_range[3] |
+      zips[i, ]@bbox[2, 2] > us_range[4])
+    to_null[i] <- TRUE
+}
+zips <- temp[!to_null, ]
 
+#Loop through zips, generating observations proportional to actual
+# population
+pop_data <- read.csv("data/census/DEC_10_SF2_PCT1_with_ann.csv",
+                     skip = 1)
+pop_data <- pop_data[pop_data$Id == 1,]
+pop_data$GEOID10 <- gsub(".*([0-9]{5})$", "\\1", pop_data$Geography)
 
-
-## sample locations from the uniform grid for each state proportionally to 
-## its population share
-
-n_households <- 10000
-sample_size_by_state <- ceiling(pop_by_state$prop_national_pop*n_households)
-
-HH_samples <- NULL
-for (state.i in 1:length(pop_by_state$STATE)) {
-  if (as.character(pop_by_state$STATE[state.i]) %in%
-      as.character(unique(grid_points$STATE))) {
-    HH_samples <- rbind(HH_samples,
-                        grid_points[sample(which(grid_points$STATE==as.character(pop_by_state$STATE[state.i])),
-                                           sample_size_by_state[state.i],
-                                           replace = TRUE),])
+household_locations <- vector("list", nrow(zips))
+for (i in 1:nrow(zips)) {
+  if (i %% 1000 == 0)
+    cat(i, "of", nrow(zips), "\n")
+  
+  n_points <- ceiling(.001 * pop_data$Total[pop_data$GEOID10 == zips$GEOID10[i]])
+  
+  if (length(n_points) > 0) {
+    this_zip_polygon <- zips[i, ]
+    candidate_points <- data.frame(x = runif(10 * n_points, this_zip_polygon@bbox[1, 1],
+                                             this_zip_polygon@bbox[1, 2]),
+                                   y = runif(10 * n_points, this_zip_polygon@bbox[2, 1],
+                                             this_zip_polygon@bbox[2, 2]))
+    # Convert pointsDF to a SpatialPoints object 
+    pointsSP <- SpatialPoints(candidate_points, 
+                              proj4string=CRS("+proj=longlat +datum=WGS84"))
+    
+    # Use 'over' to get _indices_ of the Polygons object containing each point 
+    indices <- over(pointsSP, this_zip_polygon)
+    final_locations <- data.frame(GEOID10 = zips$GEOID10[i],
+                                  (candidate_points[!is.na(indices), ])[1:n_points, ])
+    household_locations[[i]] <- final_locations
   }
 }
-rownames(HH_samples) <- 1:nrow(HH_samples)
-if (nrow(HH_samples) > 10000) {
-  HH_samples <- HH_samples[-sample(1:nrow(HH_samples),
-                                   size=nrow(HH_samples)-n_households,
-                                   replace=FALSE),]
-}
+household_locations <- do.call(rbind.data.frame, household_locations)
 
-#names(HH_samples)[match(c("x","y"),
-#                        names(HH_samples))] <- c("lon","lat")
+#Cut out people who didn't get x and y due to wacky zip shapes
+household_locations <- household_locations[!is.na(household_locations$x),]
 
+#Add state info
+states <- map('state', fill=TRUE, col="transparent", plot=FALSE)
+states_sp <- map2SpatialPolygons(states, IDs=states$names,
+                                 proj4string=CRS("+proj=longlat +datum=WGS84"))
+pointsSP <- SpatialPoints(household_locations[, c("x", "y")], 
+                          proj4string=CRS("+proj=longlat +datum=WGS84"))
+household_locations$state <- states$names[over(pointsSP, states_sp)]
+
+#Cut any households that didn't map to a state
+household_locations <- household_locations[!is.na(household_locations$state),]
+
+us_gg_map <- get_map(location = c(lon = -97.30, lat = 39.64),
+                     maptype = "roadmap",
+                     zoom = 3)
+ggmap(us_gg_map) +
+  geom_point(data = household_locations, aes(x = x, y = y), color = "#000000",
+             size = .1)
+ggsave("reports - 1 - Planning/microstrategy-symposium-images/household-locations.png",
+       height = 33, width = 55, limitsize = FALSE)
+
+household_locations$state_fips <- state.fips$fips[match(household_locations$state, 
+                                                        state.fips$polyname)]
+household_locations$state <- str_to_title(gsub("(.*):.*", "\\1", household_locations$state)) #Get rid of stuff after colons, and make title case
 
 #Break the households into regions
-n_regions <- 8
-clusters <- kmeans(HH_samples[,c("lon","lat")],
-                   n_regions)
-HH_samples$region <- clusters$cluster
+
+household_locations$region <- NA
+household_locations$region[household_locations$state %in% c(unique(household_locations$state[household_locations$x > max(household_locations$x[household_locations$state%in%c("Minnesota",
+                                                    "Iowa", "Oklahoma",
+                                                    "Kansas", "Missouri","Louisiana")])]),
+  c("Minnesota",
+    "Iowa", "Oklahoma",
+    "Kansas", "Missouri","Louisiana"))] <- "East Region"
+household_locations$region[is.na(household_locations$region)] <- "West Region"
+
+
+
 
 #Create the fulfillment centers
-n_fulfill_centers <- 5
-fulfill_centers_locations <- data.frame(grid_points[c(sample(which(grid_points$STATE=="California"),
-                                                    size=1),
-                                                    sample(which(grid_points$STATE=="South Dakota"),
-                                                           size=1),
-                                                    sample(which(grid_points$STATE=="Texas"),
-                                                                          size=1),
-                                                    sample(which(grid_points$STATE=="Georgia"),
-                                                           size=1),
-                                                    sample(which(grid_points$STATE=="New York"),
-                                                           size=1)),c("lon","lat")],
-                                        fc = 1:n_fulfill_centers)
+n_fulfill_centers <- 2
+minnesota_row <- sample(which(household_locations$state=="Minnesota"),size=1)
+cali_row <- sample(which(household_locations$state=="California"),size=1)
+fulfill_centers_locations <- data.frame(fc=c(1:n_fulfill_centers),
+                                        x=household_locations$x[c(cali_row,minnesota_row)],
+                                        y=household_locations$y[c(cali_row,minnesota_row)])
+
 
 map.usa_country <- map_data("usa")
 ggplot() +

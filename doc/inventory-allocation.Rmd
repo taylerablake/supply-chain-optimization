@@ -64,7 +64,7 @@ Predicted demand in each region drives allocation of the total buy among fulfill
 
 Consider a simple scenario: a retailer has two fulfillment centers available for distributing orders to locations across the continental US. The map in Figure 2 shows the locations of these fulfillment centers and a sample of possible locations to which the retailer will need to ship product.  In this figure, color shows the region (east or west) at which demand was forecasted, which may not be the same as the regions served most efficiently by the two fulfillment centers.
 
-```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE}
+```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE,fig.cap="Household locations of possible orders, each of which is categorized as belonging to one of two regions. While a household may lie within region 1, it may be cheaper for distribution center distribution center",fig.align="center",out.width = "190px",out.height="190px"}
 
 load(file.path(getwd(),"..","cache","toy_HH_samples.Rdata"))
 load(file.path(getwd(),"..","cache","toy_fulfill_centers_locations.RData"))

@@ -19,9 +19,10 @@ set.seed(1977)
 n_time_periods <- 100
 
 #Create all the households------------------
-zips <- readShapePoly("data/cb_2016_us_zcta510_500k/cb_2016_us_zcta510_500k",
+zips <- readShapePoly("data/census/2016/cb_2016_us_zcta510_500k/cb_2016_us_zcta510_500k",
                       proj4string = CRS("+proj=longlat +datum=WGS84"),
                       IDvar = "GEOID10")
+
 #Subset to continental US
 us_range <- map("usa", plot = FALSE)$range
 x_range <- us_range[2] - us_range[1]
@@ -45,7 +46,7 @@ zips <- temp[!to_null, ]
 
 #Loop through zips, generating observations proportional to actual
 # population
-pop_data <- read.csv("data/census/aff_download/DEC_10_SF2_PCT1_with_ann.csv",
+pop_data <- read.csv("data/census/DEC_10_SF2_PCT1_with_ann.csv",
                      skip = 1)
 pop_data <- pop_data[pop_data$Id == 1,]
 pop_data$GEOID10 <- gsub(".*([0-9]{5})$", "\\1", pop_data$Geography)
