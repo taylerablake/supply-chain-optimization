@@ -95,26 +95,39 @@ us_gg_map <- get_map(location = c(lon = -97.30, lat = 39.64),
 ggmap(us_gg_map) +
   geom_point(data = household_locations, aes(x = x, y = y), color = "#000000",
              size = .1)
-ggsave("reports - 1 - Planning/microstrategy-symposium-images/household-locations.png",
-       height = 33, width = 55, limitsize = FALSE)
+#ggsave("reports - 1 - Planning/microstrategy-symposium-images/household-locations.png",
+#       height = 33, width = 55, limitsize = FALSE)
 
 household_locations$state_fips <- state.fips$fips[match(household_locations$state, 
                                                         state.fips$polyname)]
 household_locations$state <- str_to_title(gsub("(.*):.*", "\\1", household_locations$state)) #Get rid of stuff after colons, and make title case
 
+
+
+
+
+
+
+
+
 #Break the households into regions
 
-household_locations$region <- NA
-household_locations$region[household_locations$state %in% c(unique(household_locations$state[household_locations$x > max(household_locations$x[household_locations$state%in%c("Minnesota",
-                                                    "Iowa", "Oklahoma",
-                                                    "Kansas", "Missouri","Louisiana")])]),
-  c("Minnesota",
-    "Iowa", "Oklahoma",
-    "Kansas", "Missouri","Louisiana"))] <- "East Region"
-household_locations$region[is.na(household_locations$region)] <- "West Region"
+# zip_region <- rep(NA, nrow(coordinates(zips)))
+# zip_region[coordinates(zips)[,1] < -97.03] <- "West Region"
+# zip_region[coordinates(zips)[,1] >= -97.03] <- "East Region"
+# 
+# household_locations <- data.frame(GEOID10=zips$GEOID10,
+#                                   region=zip_region) %>% merge(household_locations,.,
+#                                                                by="GEOID10")
+# 
 
 
-
+region <- rep(NA, nrow(household_locations))
+region[household_locations$state=="North Dakota"] <- "East Region"
+region[household_locations$x < -94.3] <- "West Region"
+region[household_locations$x >= -94.3] <- "East Region"
+region[household_locations$state %in% c("Missouri","Iowa","Arkansas","Louisiana","Minnesota")] <- "East Region"
+household_locations$region <- region
 
 #Create the fulfillment centers
 n_fulfill_centers <- 2
@@ -130,23 +143,39 @@ ggplot() +
   geom_polygon(data = map.usa_country,
                aes(x = long, y = lat, group = group),
                fill = "#484848") +
-  geom_point(data=HH_samples,
-             aes(x=lon,
-                 y=lat,
+  geom_point(data=household_locations[sample(1:nrow(household_locations),size=30000),],
+             aes(x=x,
+                 y=y,
                  colour=factor(region)),
              alpha=0.7,
              size=0.6) +
   coord_map(projection = "albers", lat0 = 30, lat1 = 40, xlim = c(-121,-73), ylim = c(25,51)) +
-  labs(title = "Rivers and waterways of the United States") +
+  #labs(title = "Fulfillment center & order locations") +
   theme(panel.background = element_rect(fill = "#292929")
         ,plot.background = element_rect(fill = "#292929")
+        ,legend.background = element_rect(fill = "#292929")
+        ,legend.key = element_blank()
+        ,legend.text=element_text(color="#A1A1A1", size=12)
+        ,legend.title=element_text(color="#A1A1A1", size=16)
         ,panel.grid = element_blank()
         ,axis.title = element_blank()
         ,axis.text = element_blank()
         ,axis.ticks = element_blank()
-        ,text = element_text(family = "Gill Sans", color = "#A1A1A1")
-        ,plot.title = element_text(size = 34)
-  ) 
+        ,text = element_text(color = "#A1A1A1")
+        ,plot.title = element_text(size = 20)) +
+  geom_point(data=fulfill_centers_locations,
+             aes(x,y),
+             color = "white",
+             size = 8) +
+  geom_text(data=fulfill_centers_locations,
+             aes(x,y,label=fc),
+             color = "black",
+             size = 4) +
+  #guides(colour=guide_legend("Region",override.aes = list(alpha = 1,size=2))) +
+  guides(colour="none") +
+  scale_color_tableau() 
+
+
 
 map <- get_map('United States',
                zoom=4,
@@ -154,12 +183,10 @@ map <- get_map('United States',
                maptype='hybrid')
 ggmap(map,
       darken=0.2) +
-  geom_point(data=HH_samples,
-             aes(x=lon,
-                 y=lat,
-                 colour=factor(region)),
-             alpha=0.7,
-             size=0.6) +
+  geom_point(data=household_locations[sample(1:nrow(household_locations),size=30000),],
+             aes(x=x,
+                 y=y,
+                 colour=factor(region))) +
   geom_text(data=fulfill_centers_locations,
             aes(x=lon,y=lat,label = fc),
             color = "white", size = 6) +
@@ -168,7 +195,7 @@ ggmap(map,
 rm(grid_points)
 
 
-cache("HH_samples")
+cache("household_locations")
 cache("fulfill_centers_locations")
 
 
