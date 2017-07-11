@@ -6,7 +6,7 @@ munging: FALSE
 logging: FALSE
 load_libraries: TRUE
 libraries: reshape2, plyr, ggplot2, stringr, lubridate, AAPtools, scales, rgdal, sp, maps,
-          maptools, ggmap, ggthemes, foreach, iterators, parallel, zipcode
+          maptools, ggmap, ggthemes, foreach, iterators, parallel, zipcode, alphahull
 as_factors: TRUE
 data_tables: FALSE
 attach_internal_libraries: FALSE
