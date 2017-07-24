@@ -64,61 +64,10 @@ Predicted demand in each region drives allocation of the total buy among fulfill
 
 Consider a simple scenario: a retailer has two fulfillment centers available for distributing orders to locations across the continental US. The map in Figure 2 shows the locations of these fulfillment centers and a sample of possible locations to which the retailer will need to ship product.  In this figure, color shows the region (east or west) at which demand was forecasted, which may not be the same as the regions served most efficiently by the two fulfillment centers.
 
-```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE,fig.cap="Household locations of possible orders, each of which is categorized as belonging to one of two regions. While a household may lie within region 1, it may be cheaper for distribution center distribution center",fig.align="center",out.width = "190px",out.height="190px"}
-
-load(file.path(getwd(),"..","cache","toy_HH_samples.Rdata"))
-load(file.path(getwd(),"..","cache","toy_fulfill_centers_locations.RData"))
-
-
-map.usa_country <- map_data("usa")
-ggplot() +
-  geom_polygon(data = map.usa_country,
-               aes(x = long, y = lat, group = group),
-               fill = "#484848") +
-  geom_point(data=toy_HH_samples,
-             aes(x=lon,y=lat,colour=factor(region)),
-             alpha=0.5,
-             size=0.6) +
-  geom_text(data=toy_fulfill_centers_locations,
-            aes(x=lon,y=lat+2.7,label = paste0("fulfillment\n center ",fc)),
-            color = "white", size = 4) +
-  geom_point(data=toy_fulfill_centers_locations,
-             aes(x=lon,y=lat),
-             color = "white",
-             size = 3) +
-  coord_map(projection = "albers", lat0 = 30, lat1 = 40, xlim = c(-121,-73), ylim = c(25,51)) +
-  #labs(title = "Fulfillment center & order locations") +
-  theme(panel.background = element_rect(fill = "#292929")
-        ,plot.background = element_rect(fill = "#292929")
-        ,legend.background = element_rect(fill = "#292929")
-        ,legend.key = element_blank()
-        ,legend.text=element_text(color="#A1A1A1", size=12)
-        ,legend.title=element_text(color="#A1A1A1", size=16)
-        ,panel.grid = element_blank()
-        ,axis.title = element_blank()
-        ,axis.text = element_blank()
-        ,axis.ticks = element_blank()
-        ,text = element_text(color = "#A1A1A1")
-        ,plot.title = element_text(size = 20)) +
-  #guides(colour=guide_legend("Region",override.aes = list(alpha = 1,size=2))) +
-  guides(colour="none") +
-  scale_color_tableau() 
+```{r echo=FALSE, fig.align="center",out.width = "290px",out.height="290px",fig.cap="Household locations of possible orders, each of which is categorized as belonging to one of two regions, indicated by color. Each household belongs to the territory of the closest fulfillment center, which are indicated by the polygons. The regions and fulfillment center territories do not necessary correspond to one another; there are many households belonging to the west region which are closer in distance to fulfillment center 2."}
+knitr::include_graphics("img/two-region-household-map-with-territories.png") 
 ```
 
-
-```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE}
-#Calculate distances from each ordering HH to each FC
-  toy_deliver_distances <- as.matrix(dist(rbind(toy_fulfill_centers_locations[, c("lon", "lat")],
-                                            toy_HH_samples[, c("lon", "lat")])))
-  toy_deliver_distances <- toy_deliver_distances[1:length(unique(toy_fulfill_centers_locations$fc)), 
-                                         -(1:length(unique(toy_fulfill_centers_locations$fc)))]
-  toy_deliver_distances <- matrix(as.numeric(toy_deliver_distances),
-                                  nrow = nrow(toy_fulfill_centers_locations))
-  
-  #Find the closest FC to each HH
-  toy_closest_delivery <- apply(toy_deliver_distances, 2, which.min)
-  #table(toy_closest_delivery)
-```
 
 As an initial thought experiment, let's suppose we know exactly which households are going to order our product (and, by extension, exactly what demand will be).  In addition, we know all of the rules we get to set about our business: what the AUR is before markdowns (approximately, since we set price), the discounting that will be applied to excess inventory, the rules for determining which fulfillment center will fulfill orders from each address, and the costs associated with fulfilling an order from each fulfillment center.  Having all this information, we can calculate how good a particular allocation of units to fulfillment centers is.  We call this the \emph{value} of an allocation  As a simple example, let's say we allocate all the inventory to fulfillment center 1.  The value of this allocation is the revenue (average AUR times demand) minus the sum of delivery costs to households from fulfillment center 1.  We can calculate this value for any allocation, so we can find the optimal allocation via any of several standard optimization algorithms.
 
@@ -130,7 +79,7 @@ There is a statistical paradigm, Bayesian statistics, that provides a natural wa
 
 As an analogy, imagine that I have a magic box with a button and a set of dials. When the button is pressed, the box generates values of (potential) total sales in each of the two regions.  The dials allow you to specify the ``state of the market'' in each region during the time that the product will be sold; they control the specific relationship between influential factors and total sales. For example, the box might have four dials which control how each of the seasons affect sales. Imagine that on the box there are also dials for specifying the effect of all the other influential factors, such as population demographics and marketing spend, as well as dials for specifying the relationship between past sales and future sales.  
 
-```{r echo=FALSE, fig.align="center",out.width = "290px",out.height="290px",fig.cap="A lovely magical box."}
+```{r echo=FALSE, fig.align="center",out.width = "290px",out.height="290px",fig.cap="After setting the dials on the magic box, it can generate potential values of future sales under the market conditions specified by the dial values."}
 knitr::include_graphics("img/black-box-sales-output.png") 
 ```
 
@@ -220,7 +169,8 @@ ggplot(data=coffee_sales,
         axis.text.x = element_blank())
 
 ```
-[TODO : Insert muted melon dials set to appropriate parameter value below each facet block, cut off the facet labels]
+
+
 
 Figure 4 shows how adjusting the dial changes our description of the relationship between sales and temperature.  Some curves appear to be more supported by the data than others. The curves in the middle panel fit the historical data very well, so it is very likely that those settings of the dial are right. The setting generating the line on the left is very unlikely, and the setting generating the line on the right is unlikely but plausible.
 
