@@ -8,7 +8,18 @@ output:
 
 ---
 
-In 2016, e-commerce sales totaled an estimated $394.9 billion, accounting for 8.1 percent of total annual sales. This total was a 15 percent increase from 2015. Advances in technology and adoption of the internet have forced the retail industry to make dramatic shifts toward e-commerce. While this change presents a tremendous opportunity for business growth, the cost associated with inefficiencies in supply chains makes optimally allocating inventory to fulfillment centers integral to retailers' success. Customer retention and loyalty requires the business to deliver products quickly and efficiently, so inventory allocation to fulfillment centers must account for two primary factors:
+\section{Big Ideas}
+
+\begin{itemize}
+\item Optimizing the distribution of retail inventory to fulfillment centers requires forecasting future product demand, and there is uncertainty associated with any forecast.
+\item Forecast uncertainty comes from multiple sources, but current inventory allocation tools typically only account for a portion of this uncertainty.
+\item We applied Bayesian methodology to optimize allocation while accounting for all sources of uncertainty in a forecast.
+\end{itemize}
+
+
+
+
+In 2016, U.S. e-commerce sales totaled an estimated $394.9 billion, accounting for 8.1 percent of total annual sales. This total was a 15 percent increase from 2015. Advances in technology and adoption of the internet have forced the retail industry to make dramatic shifts toward e-commerce. While this change presents a tremendous opportunity for business growth, the cost associated with inefficiencies in supply chains makes optimally allocating inventory to fulfillment centers integral to retailers' success. Customer retention and loyalty requires the business to deliver products quickly and efficiently, so inventory allocation to fulfillment centers must account for two primary factors:
 
 + item cost of delivering units from fulfillment centers to delivery addresses
 + length of time required to fulfill orders to delivery addresses from fulfillment centers
@@ -29,7 +40,7 @@ Despite the numerous existing applications offering solutions to the allocation 
 
 Even when all the assumptions of a forecasting model are reasonable, there is uncertainty in demand.  This uncertainty comes from two sources: random variation in demand and uncertainty about the model we use to make predictions. Most existing inventory allocation tools determine the best allocation of inventory assuming that this prediction error doesn't exist. This failure to account for the uncertainty can lead to suboptimal allocation of inventory, leading to loss incurred due to fulfillment centers with overstock or inability to fulfill customer orders where the demanded exceed projections.
 
-\section{ Our Solution }
+\section{ A New Solution: the Bayesian Approach }
 
 Optimizing inventory allocation is not a new concern for retailers, so it's interesting that there is so little variety in available solutions.  Futhermore, most of the existing products providing solutions to these problems aren't leveraging Bayesian methods.  Bayesian methods are a set of statistical techniques that naturally account for all of the uncertainty in a forecast, so they are a natural fit for the problem at hand.
 
@@ -39,7 +50,7 @@ As with all inventory allocation software, we begin by determining the total buy
 2. Fit the model to historical data.
 3. Pick a total buy that guarantees a particular service level (i.e., probability that the demand will not exceed the buy).
 
-It's important to recognize that overbuying and underbuying are not equally bad.  When demand exceeds the buy, the retailer misses out on possible sales.  When the opposite happens, the retailer must mark down prices to accelerate the rate of sales, so excess units are sold at a price resulting in a lower AUR than during the planned sales period. Figure 1 shows a typical relationship between excess quantity and AUR - for greater excess, more markdown is required, resulting in a lower AUR.
+It's important to recognize that overbuying and underbuying are not equally bad.  When demand exceeds the buy, the retailer misses out on possible sales.  When the opposite happens, the retailer must mark down prices to accelerate the rate of sales, so excess units are sold at a price resulting in a lower AUR (average unit retail) than during the planned sales period. Figure 1 shows a typical relationship between excess quantity and AUR - for greater excess, more markdown is required, resulting in a lower AUR.
 
 ```{r echo=FALSE, fig.cap="A typical curve for describing the relationship between the price of excess units and the overstock quantity - the amount by which the buy exceeds demand.",fig.align="center",out.width = "190px",out.height="190px"}
 library(ggplot2)
@@ -83,7 +94,7 @@ As an analogy, imagine that I have a magic box with a button and a set of dials.
 knitr::include_graphics("img/black-box-sales-output.png") 
 ```
 
-In the context of statistical modeling, the dials control the values of the _model parameters_.  Setting these dials a particular way doesn't guarantee a specific demand outcome - if I press the magic button multiple times, the box will produce different output.  Some of these outcomes (the ones in line with historical trends) are more likely to be generated than others, but we can't predict exactly what we'll get.  Figure~\ref{fig:black-box-sales-output} shows what the result of pressing the button 100 times might look like. 
+In the context of statistical modeling, the dials control the values of the _model parameters_.  Setting these dials a particular way doesn't guarantee a specific demand outcome - if I press the magic button multiple times, the box will produce different output.  Some of these outcomes (the ones in line with historical trends) are more likely to be generated than others, but we can't predict exactly what we'll get.  Figure 3 shows what the result of pressing the button 100 times might look like. 
 
 Let's imagine that we know exactly where the dials should be set; we know the true values of the _model parameters_.  We still don't know the optimal allocation since there is uncertainty in true demand and in where that demand will come from, so we can't calculate the value of any single allocation.  To get around this problem, use the following procedure:
 
