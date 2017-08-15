@@ -2,21 +2,21 @@
 title: "Optimization of Inventory Allocation"
 output:
   pdf_document:
-    fig_caption: TRUE
+    fig_caption: yes
     includes:
       in_header: mystyles.sty
-
+  word_document: default
 ---
 
 \section{Big Ideas}
 
 \begin{itemize}
-\item Optimizing the distribution of retail inventory to fulfillment centers requires forecasting future product demand, and there is uncertainty associated with any forecast.
-\item Forecast uncertainty comes from multiple sources, but current inventory allocation tools typically only account for a portion of this uncertainty.
-\item We applied Bayesian methodology to optimize allocation while accounting for all sources of uncertainty in a forecast.
+\item In the complex omnichannel world of retail, efficiently allocating inventory to fulfillment centers is essential for creating a positive customer experience and for minimizing costs.
+\item Allocating inventory to retail fulfillment centers requires forecasting total demand across the entire market and forecasting demand specific to subregions of the market (e.g. states, DMAs, or sales regions). 
+\item There is uncertainty associated with these forecasts stemming from two sources: uncertainty in consumer behavior as described by the forecasting model and uncertainty about the model itself. Current inventory allocation tools typically only account for the first source of uncertainty.
+\item Capturing all of the uncertainty in a demand forecast requires advanced analytical techniques, and Bayesian methods are a natural way to do this.
+\item We used Bayesian methods to simulate potential demand scenarios, assigning more weight to plausible scenarios than to scenarios that are less likely to occur. Accounting for all of these what-ifs allows us to minimize distribution costs.  
 \end{itemize}
-
-
 
 
 In 2016, U.S. e-commerce sales totaled an estimated $394.9 billion, accounting for 8.1 percent of total annual sales. This total was a 15 percent increase from 2015. Advances in technology and adoption of the internet have forced the retail industry to make dramatic shifts toward e-commerce. While this change presents a tremendous opportunity for business growth, the cost associated with inefficiencies in supply chains makes optimally allocating inventory to fulfillment centers integral to retailers' success. Customer retention and loyalty requires the business to deliver products quickly and efficiently, so inventory allocation to fulfillment centers must account for two primary factors:
@@ -86,7 +86,7 @@ Things get more complex once we incorporate the various sources of uncertainty. 
 
 \subsection{Why do we want to average over parameter values?}
 
-There is a statistical paradigm, Bayesian statistics, that provides a natural way of accounting for all the sources of uncertainty in demand prediction. To understand how this approach is different from traditional methods and what advantages it providse in this situation, we first need to understand the different sources of uncertainty in predicted demand (and, thus, in our estimated value of an allocation).
+Bayesian statistics is a statistical paradigm that provides a natural way of accounting for all the sources of uncertainty in demand prediction. To understand how this approach is different from traditional methods and what advantages it providse in this situation, we first need to understand the different sources of uncertainty in predicted demand (and, thus, in our estimated value of an allocation).
 
 As an analogy, imagine that I have a magic box with a button and a set of dials. When the button is pressed, the box generates values of (potential) total sales in each of the two regions.  The dials allow you to specify the ``state of the market'' in each region during the time that the product will be sold; they control the specific relationship between influential factors and total sales. For example, the box might have four dials which control how each of the seasons affect sales. Imagine that on the box there are also dials for specifying the effect of all the other influential factors, such as population demographics and marketing spend, as well as dials for specifying the relationship between past sales and future sales.  
 
@@ -130,7 +130,7 @@ ggplot(data=coffee_sales,aes(x=weekly_high,y=units_sold)) +
 
 As an example, suppose a coffee retailer has records of weekly weather and the number of iced coffee units sold per week. Figure 3 displays the relationship between historical weekly sales and the weekly average high temperature. By fitting a statistical model to the historical data, we can infer how to set the dial controlling the relationship between weekly high temperature and sales. 
 
-```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE, fig.width = 8,fig.height=3,fig.align="center", fig.cap = "Several hypothetial 'true' relationships between temperature and coffee sales."}
+```{r,echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, cache=TRUE, fig.width = 8,fig.height=3,fig.align="center", fig.cap = "Several hypothetical 'true' relationships between temperature and coffee sales."}
 library(lubridate)
 library(ggplot2)
 library(ggthemes)
